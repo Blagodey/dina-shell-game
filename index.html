@@ -187,13 +187,29 @@
 
         @media (max-width: 768px) {
             .hud-item {
-                font-size: 20px;
+                font-size: 18px;
                 padding: 8px 16px;
+                gap: 8px;
             }
 
             .hud-icon {
-                width: 28px;
-                height: 28px;
+                width: 24px;
+                height: 24px;
+            }
+
+            #hud {
+                padding: 10px;
+            }
+
+            .level-text {
+                margin-left: 10px;
+                padding-left: 10px;
+                font-size: 16px;
+            }
+
+            #levelText {
+                padding: 2px 8px;
+                min-width: 24px;
             }
 
             #controls {
@@ -214,17 +230,35 @@
 
         @media (max-width: 480px) {
             .hud-item {
-                font-size: 18px;
+                font-size: 16px;
                 padding: 6px 12px;
+                gap: 6px;
+                margin: 0 5px;
+            }
+
+            .hud-icon {
+                width: 20px;
+                height: 20px;
+            }
+
+            #hud {
+                padding: 8px;
             }
 
             .level-text {
-                margin-left: 12px;
-                padding-left: 12px;
+                margin-left: 8px;
+                padding-left: 8px;
+                font-size: 14px;
+            }
+
+            #levelText {
+                padding: 2px 6px;
+                min-width: 20px;
             }
 
             #controls {
                 gap: 20px;
+                bottom: 20px;
             }
 
             .control-btn {
@@ -235,6 +269,53 @@
             .control-btn img {
                 width: 40px;
                 height: 40px;
+            }
+
+            #soundToggle {
+                top: 10px;
+                right: 10px;
+                width: 40px;
+                height: 40px;
+                padding: 8px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .hud-item {
+                font-size: 14px;
+                padding: 4px 10px;
+                gap: 4px;
+                margin: 0 3px;
+            }
+
+            .hud-icon {
+                width: 18px;
+                height: 18px;
+            }
+
+            .level-text {
+                margin-left: 6px;
+                padding-left: 6px;
+                font-size: 13px;
+            }
+
+            #levelText {
+                padding: 1px 5px;
+                min-width: 18px;
+            }
+
+            #controls {
+                gap: 15px;
+            }
+
+            .control-btn {
+                width: 55px;
+                height: 55px;
+            }
+
+            .control-btn img {
+                width: 35px;
+                height: 35px;
             }
         }
     </style>
