@@ -2,327 +2,407 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Діна збирає мушлі</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <style>
+    /* Скидання стилів та встановлення висоти на 100% для html та body */
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: #111;
       overflow: hidden;
-      touch-action: none;
+      background: #000;
     }
-    body {
-      width: 100vw;
-      height: 100vh;
-      overscroll-behavior: none;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    #game-container {
+    /* Контейнер гри центрується горизонтально */
+    #gameContainer {
       position: relative;
-      width: 100vw;
-      height: 100vh;
-      max-width: 450px;
-      max-height: 800px;
-      aspect-ratio: 9 / 16;
-      background: #000;
-      box-shadow: 0 0 24px #0008;
-      overflow: hidden;
+      margin: 0 auto;
+      /* Ширина та висота будуть встановлені скриптом відповідно до canvas */
     }
-    #game-canvas {
-      width: 100%;
-      height: 100%;
+    canvas {
       display: block;
-      background: #000;
-      touch-action: none;
+      background: #000; /* запасний колір фону */
     }
-    .ctrl-btn {
+    /* Панель інтерфейсу (HUD) зверху */
+    #hud {
       position: absolute;
-      width: 18vw;
-      max-width: 80px;
-      aspect-ratio: 1 / 1;
-      z-index: 10;
-      pointer-events: auto;
-      opacity: 0.92;
-      background: none;
-      border: none;
-      padding: 0;
-      transition: opacity 0.15s;
-      user-select: none;
-    }
-    .ctrl-btn:active { opacity: 0.7; }
-    #btn-left  { left: 8vw;  bottom: 5vw;}
-    #btn-right { left: 30vw; bottom: 5vw;}
-    #btn-up    { left: 19vw; bottom: 15vw;}
-    #btn-down  { left: 19vw; bottom: -5vw;}
-    @media (min-width: 451px) {
-      #game-container { width: 450px; height: 800px; }
-    }
-    #btn-sound {
-      position: absolute;
-      top: 3vw; right: 3vw;
-      width: 11vw; max-width: 46px;
-      aspect-ratio: 1 / 1;
-      z-index: 20;
-      background: none;
-      border: none;
-      padding: 0;
-      pointer-events: auto;
-      opacity: 0.88;
-    }
-    #btn-sound:active { opacity: 0.7; }
-    #ui-overlay {
-      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 100%;
-      top: 0; left: 0;
-      pointer-events: none;
-      z-index: 5;
-      font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
-    }
-    .score-box, .level-box, .timer-box {
-      position: absolute;
-      left: 16px;
-      font-size: 2.3vh;
       color: #fff;
-      text-shadow: 0 0 7px #000, 0 0 2px #2d55a9;
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      text-shadow: 1px 1px 2px #000;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      background: rgba(0,0,0,0.18);
-      border-radius: 13px;
-      padding: 3px 12px 3px 8px;
-      height: 36px;
-      min-width: 70px;
-      pointer-events: none;
+      padding: 5px 10px;
+      box-sizing: border-box;
+      z-index: 2;
     }
-    .score-box { top: 14px; }
-    .level-box { top: 14px; left: unset; right: 16px;}
-    .timer-box { top: 56px; left: 50%; transform: translateX(-50%);}
-    .score-icon, .level-icon, .timer-icon {
-      width: 28px; height: 28px;
-      margin-right: 8px;
-      margin-left: 2px;
-      vertical-align: middle;
-      pointer-events: none;
+    #hud span {
+      display: inline-flex;
+      align-items: center;
+      margin: 0 5px;
     }
-    .level-icon { margin-left: 0; margin-right: 6px;}
-    .timer-icon { margin-right: 6px;}
-    @media (hover: hover) and (pointer: fine) {
-      .ctrl-btn { display: none !important; }
+    #hud img.icon-small {
+      width: 24px;
+      height: 24px;
+      margin-right: 5px;
     }
+    #soundToggle {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+    }
+    /* Блок з кнопками керування (тільки для мобільних пристроїв) */
+    #controls {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px;
+      height: 150px;
+      z-index: 2;
+      /* Спочатку видно, але JS може приховати на ПК */
+    }
+    #controls img {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      opacity: 0.8; /* трохи прозорі для кращого огляду фону */
+      /* Заборона виділення та перетягування зображень */
+      user-select: none;
+      -webkit-user-drag: none;
+      -webkit-touch-callout: none;
+    }
+    #btnUp    { top: 0; left: 50%; transform: translateX(-50%); }
+    #btnDown  { bottom: 0; left: 50%; transform: translateX(-50%); }
+    #btnLeft  { left: 0; top: 50%; transform: translateY(-50%); }
+    #btnRight { right: 0; top: 50%; transform: translateY(-50%); }
   </style>
 </head>
 <body>
-  <div id="game-container">
-    <canvas id="game-canvas" width="360" height="640"></canvas>
-    <div id="ui-overlay">
-      <div class="score-box"><img src="icons/shell.png" class="score-icon"> <span id="score">0</span></div>
-      <div class="timer-box"><img src="icons/hourglass.png" class="timer-icon"> <span id="timer">60</span></div>
-      <div class="level-box"><img src="icons/yacht.png" class="level-icon"> <span id="level">1</span></div>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    <!-- Панель інтерфейсу: рахунок, таймер, рівень, кнопка звуку -->
+    <div id="hud">
+      <span id="scoreDisplay">
+        <img src="icons/shell.png" class="icon-small" alt="Мушля">
+        <span id="scoreText">0</span>
+      </span>
+      <span id="timeDisplay">
+        <img src="icons/hourglass.png" class="icon-small" alt="Час">
+        <span id="timeText">60</span>
+      </span>
+      <span id="levelDisplay">Рівень: <span id="levelText">1</span></span>
+      <img id="soundToggle" src="icons/sound-on.png" alt="Звук">
     </div>
-    <button class="ctrl-btn" id="btn-left"><img src="icons/left.png" width="100%" draggable="false"></button>
-    <button class="ctrl-btn" id="btn-right"><img src="icons/right.png" width="100%" draggable="false"></button>
-    <button class="ctrl-btn" id="btn-up"><img src="icons/up.png" width="100%" draggable="false"></button>
-    <button class="ctrl-btn" id="btn-down"><img src="icons/down.png" width="100%" draggable="false"></button>
-    <button id="btn-sound"><img id="sound-icon" src="icons/sound-on.png" width="100%" draggable="false"></button>
+    <!-- Кнопки керування (відображаються тільки на мобільних пристроях) -->
+    <div id="controls">
+      <img id="btnUp" src="icons/up.png" alt="Вгору">
+      <img id="btnDown" src="icons/down.png" alt="Вниз">
+      <img id="btnLeft" src="icons/left.png" alt="Вліво">
+      <img id="btnRight" src="icons/right.png" alt="Вправо">
+    </div>
   </div>
-  <audio id="bg-music" src="music/yachting-song.MP3" loop></audio>
   <script>
-    // --- Canvas config ---
-    const canvas = document.getElementById('game-canvas');
+    // Налаштування canvas відповідно до розміру вікна (збереження пропорції 9:16)
+    const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    let W = canvas.width, H = canvas.height;
     function resizeCanvas() {
-      const container = document.getElementById('game-container');
-      const aspect = 9/16;
-      let ww = window.innerWidth, wh = window.innerHeight;
-      let nh = wh, nw = wh * aspect;
-      if (nw > ww) { nw = ww; nh = nw / aspect; }
-      container.style.width = nw+'px'; container.style.height = nh+'px';
-      canvas.width = 360; canvas.height = 640;
-      W = canvas.width; H = canvas.height;
+      const winH = window.innerHeight;
+      const winW = window.innerWidth;
+      // Робимо висоту canvas рівною висоті вікна, ширину - пропорційно 9:16
+      canvas.height = winH;
+      canvas.width = Math.floor(winH * 9 / 16);
+      // Якщо отримана ширина більша за ширину вікна, коригуємо по ширині (і відповідно висоту)
+      if (canvas.width > winW) {
+        canvas.width = winW;
+        canvas.height = Math.floor(canvas.width * 16 / 9);
+      }
+      // Оновити розміри контейнера для правильного центрування
+      const container = document.getElementById('gameContainer');
+      container.style.width = canvas.width + 'px';
+      container.style.height = canvas.height + 'px';
     }
-    window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-
-    // --- Load images (CORRECT PATHS!) ---
-    const imgBg    = new Image(); imgBg.src = "backgrounds/bg5.jpg";
-    const imgDina  = new Image(); imgDina.src = "icons/dina.png";
-    const imgShell = new Image(); imgShell.src = "icons/shell.png";
-    const imgYacht = new Image(); imgYacht.src = "icons/yacht.png";
-    const images = [imgBg, imgDina, imgShell, imgYacht];
+    // Повторно змінюємо розмір canvas при зміні розміру вікна
+    window.addEventListener('resize', resizeCanvas);
+    // Змінні стану гри
+    let score = 0;
+    let level = 1;
+    let gameOver = false;
+    let timeLeft = 60; // секунд залишилось
+    // Швидкості руху персонажів (пікселів за секунду)
+    const DINA_SPEED = 300;
+    const YACHT_SPEED = 240;
+    // Об'єкти гри та їх властивості
+    const dina = { x: 0, y: 0, width: 0, height: 0 };
+    const yacht = { x: 0, y: 0, width: 0, height: 0 };
+    const shell = { x: 0, y: 0, width: 0, height: 0 };
+    // Завантаження зображень
+    const images = {};
+    const imageNames = ['dina', 'shell', 'yacht1', 'bg1', 'bg2', 'bg3', 'bg4', 'bg5', 'bg6'];
     let imagesLoaded = 0;
-    images.forEach(img => {
-      img.onload = () => {
+    const totalImages = imageNames.length;
+    for (let name of imageNames) {
+      images[name] = new Image();
+      if (name.startsWith('bg')) {
+        images[name].src = 'backgrounds/' + name + '.jpg';
+      } else if (name === 'yacht1') {
+        images[name].src = 'yachts/' + name + '.png';
+      } else {
+        images[name].src = 'icons/' + name + '.png';
+      }
+      images[name].onload = function() {
         imagesLoaded++;
-        if (imagesLoaded === images.length) {
+        if (imagesLoaded === totalImages) {
           startGame();
         }
       };
-      img.onerror = () => {
-        alert("Не вдалося завантажити одне із зображень. Перевір шлях: " + img.src);
-      }
-    });
-
-    // --- Game variables ---
-    let dina = { x: 100, y: 400, size: 60, speed: 4 };
-    let yacht = { x: 220, y: 80, size: 72, speed: 3.2 };
-    let shell = { x: 200, y: 280, size: 42 };
-    let dx = 0, dy = 0;
-    let score = 0, level = 1, timer = 60, playing = true;
-    let soundOn = true;
-    let moveKeys = {left: false, right: false, up: false, down: false};
-    let music = document.getElementById('bg-music');
-    let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    // --- UI Elements ---
-    const scoreBox = document.getElementById('score');
-    const levelBox = document.getElementById('level');
-    const timerBox = document.getElementById('timer');
-    const btnSound = document.getElementById('btn-sound');
-    const soundIcon = document.getElementById('sound-icon');
-
-    // --- Handle Sound ---
-    function playMusic() {
-      if (soundOn && music.paused) music.play().catch(()=>{});
     }
-    function toggleSound() {
-      soundOn = !soundOn;
-      if (soundOn) {
-        soundIcon.src = "icons/sound-on.png";
-        playMusic();
-      } else {
-        soundIcon.src = "icons/sound-off.png";
-        music.pause();
-      }
-    }
-    btnSound.addEventListener('click', toggleSound);
-
-    // --- Controls ---
-    window.addEventListener('keydown', e => {
-      if (e.repeat) return;
-      if (e.key === "ArrowLeft") moveKeys.left = true;
-      if (e.key === "ArrowRight") moveKeys.right = true;
-      if (e.key === "ArrowUp") moveKeys.up = true;
-      if (e.key === "ArrowDown") moveKeys.down = true;
-    });
-    window.addEventListener('keyup', e => {
-      if (e.key === "ArrowLeft") moveKeys.left = false;
-      if (e.key === "ArrowRight") moveKeys.right = false;
-      if (e.key === "ArrowUp") moveKeys.up = false;
-      if (e.key === "ArrowDown") moveKeys.down = false;
-    });
-    function btnDown(dir){ moveKeys[dir]=true; }
-    function btnUp(dir){ moveKeys[dir]=false; }
-    document.getElementById('btn-left').ontouchstart = ()=>btnDown('left');
-    document.getElementById('btn-left').ontouchend   = ()=>btnUp('left');
-    document.getElementById('btn-right').ontouchstart= ()=>btnDown('right');
-    document.getElementById('btn-right').ontouchend  = ()=>btnUp('right');
-    document.getElementById('btn-up').ontouchstart   = ()=>btnDown('up');
-    document.getElementById('btn-up').ontouchend     = ()=>btnUp('up');
-    document.getElementById('btn-down').ontouchstart = ()=>btnDown('down');
-    document.getElementById('btn-down').ontouchend   = ()=>btnUp('down');
-
-    function isCollide(a, b, sizeA, sizeB) {
-      const dx = a.x + sizeA/2 - (b.x + sizeB/2);
-      const dy = a.y + sizeA/2 - (b.y + sizeB/2);
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      return dist < (sizeA+sizeB)/2.1;
-    }
-    function placeShell() {
-      let margin = 60;
-      let x, y;
-      do {
-        x = margin + Math.random()*(W-2*margin);
-        y = margin + Math.random()*(H-2*margin);
-      } while (Math.abs(x-dina.x)<90 && Math.abs(y-dina.y)<90);
-      shell.x = x;
-      shell.y = y;
-    }
-    let timerInterval = setInterval(()=>{
-      if (!playing) return;
-      timer--;
-      timerBox.textContent = timer;
-      if (timer<=0) {
-        playing = false;
-        music.pause();
-      }
-    },1000);
-
-    function update() {
-      if (!playing) {
-        draw();
-        ctx.save();
-        ctx.fillStyle = "#222a";
-        ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = "#fff";
-        ctx.font = "32px Arial Rounded MT Bold, Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Гра закінчена", W/2, H/2-10);
-        ctx.font = "22px Arial";
-        ctx.fillText("Рахунок: " + score, W/2, H/2+35);
-        return;
-      }
-      dx = dy = 0;
-      if (moveKeys.left) dx = -dina.speed;
-      if (moveKeys.right) dx = dina.speed;
-      if (moveKeys.up) dy = -dina.speed;
-      if (moveKeys.down) dy = dina.speed;
-      dina.x += dx; dina.y += dy;
-      dina.x = Math.max(0, Math.min(W-dina.size, dina.x));
-      dina.y = Math.max(0, Math.min(H-dina.size, dina.y));
-      let vX = shell.x - yacht.x, vY = shell.y - yacht.y;
-      let dist = Math.sqrt(vX*vX+vY*vY);
-      if (dist > 2) {
-        let step = Math.min(yacht.speed, dist);
-        yacht.x += vX/dist * step;
-        yacht.y += vY/dist * step;
-      }
-      if (isCollide(dina, shell, dina.size, shell.size)) {
-        score++;
-        scoreBox.textContent = score;
-        if (score % 5 === 0) { level++; levelBox.textContent = level; yacht.speed += 0.4; }
-        placeShell();
-      } else if (isCollide(yacht, shell, yacht.size, shell.size)) {
-        placeShell();
-      }
-      draw();
-      requestAnimationFrame(update);
-    }
-    function draw() {
-      if (imgBg.complete) ctx.drawImage(imgBg, 0, 0, W, H);
-      else ctx.fillStyle="#4065a2", ctx.fillRect(0,0,W,H);
-      ctx.drawImage(imgShell, shell.x, shell.y, shell.size, shell.size);
-      ctx.drawImage(imgYacht, yacht.x, yacht.y, yacht.size, yacht.size);
-      ctx.drawImage(imgDina, dina.x, dina.y, dina.size, dina.size);
-    }
+    // Аудіо: фонова музика
+    const bgMusic = new Audio('music/yachting-song.MP3');
+    bgMusic.loop = true;
+    let soundEnabled = true;
+    let musicStarted = false;
+    // Функція старту гри після завантаження ресурсів
     function startGame() {
-      score = 0; level = 1; timer = 60; playing = true;
-      scoreBox.textContent = score;
-      levelBox.textContent = level;
-      timerBox.textContent = timer;
-      dina.x = 100; dina.y = 400;
-      yacht.x = 220; yacht.y = 80; yacht.speed = 3.2;
-      placeShell();
-      music.currentTime = 0;
-      if (soundOn) playMusic();
-      requestAnimationFrame(update);
+      // Встановлюємо початкові розміри персонажів на основі розміру canvas
+      // Діна ~10% висоти
+      dina.height = canvas.height * 0.1;
+      dina.width = dina.height * (images['dina'].width / images['dina'].height || 1);
+      // Яхта ~15% висоти
+      yacht.height = canvas.height * 0.15;
+      yacht.width = yacht.height * (images['yacht1'].width / images['yacht1'].height || 1);
+      // Мушля ~5% висоти
+      shell.height = canvas.height * 0.05;
+      shell.width = shell.height * (images['shell'].width / images['shell'].height || 1);
+      // Початкові позиції об'єктів
+      dina.x = (canvas.width - dina.width) / 2;
+      dina.y = canvas.height - dina.height; // Діна внизу по центру
+      yacht.x = (canvas.width - yacht.width) / 2;
+      yacht.y = 0; // Яхта зверху по центру
+      // Створити першу мушлю у випадковій позиції
+      spawnShell();
+      // Автоматично запускати музику, якщо звук увімкнено (може бути заблоковано політикою браузера)
+      if (soundEnabled) {
+        bgMusic.play().then(function() { musicStarted = true; }).catch(function() { /* Автозапуск звуку заблоковано */ });
+      }
+      // Запустити таймер відліку часу
+      setInterval(function() {
+        if (gameOver) return;
+        timeLeft--;
+        if (timeLeft < 0) timeLeft = 0;
+        document.getElementById('timeText').innerText = timeLeft;
+        if (timeLeft === 0) {
+          // Кінець гри
+          gameOver = true;
+          alert('Час вийшов! Ваш рахунок: ' + score);
+        }
+      }, 1000);
+      // Запустити основний цикл гри
+      requestAnimationFrame(gameLoop);
     }
-    document.body.addEventListener('touchstart', ()=>{ playMusic(); }, {once:true});
-    document.body.addEventListener('mousedown', ()=>{ playMusic(); }, {once:true});
-    canvas.addEventListener('click', ()=>{ if (!playing) startGame(); });
-    function setControlsVisibility() {
-      let show = isMobile || window.innerWidth<600;
-      ["btn-left","btn-right","btn-up","btn-down"].forEach(id=>{
-        document.getElementById(id).style.display = show?"block":"none";
+    // Функція для появи нової мушлі у випадковій позиції
+    function spawnShell() {
+      shell.x = Math.random() * (canvas.width - shell.width);
+      shell.y = Math.random() * (canvas.height - shell.height);
+    }
+    // Стани натиснутих кнопок керування
+    let upPressed = false, downPressed = false, leftPressed = false, rightPressed = false;
+    // Обробники подій клавіатури для керування Діною
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowUp')    { upPressed = true; e.preventDefault(); }
+      if (e.key === 'ArrowDown')  { downPressed = true; e.preventDefault(); }
+      if (e.key === 'ArrowLeft')  { leftPressed = true; e.preventDefault(); }
+      if (e.key === 'ArrowRight') { rightPressed = true; e.preventDefault(); }
+      // На перше натискання клавіші запускаємо музику, якщо звук увімкнено
+      if (!musicStarted && soundEnabled) {
+        bgMusic.play();
+        musicStarted = true;
+      }
+    });
+    document.addEventListener('keyup', function(e) {
+      if (e.key === 'ArrowUp')    upPressed = false;
+      if (e.key === 'ArrowDown')  downPressed = false;
+      if (e.key === 'ArrowLeft')  leftPressed = false;
+      if (e.key === 'ArrowRight') rightPressed = false;
+    });
+    // Обробники подій для кнопок керування (сенсорні екрани)
+    const btnUp    = document.getElementById('btnUp');
+    const btnDown  = document.getElementById('btnDown');
+    const btnLeft  = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    // Функція прив'язки подій до кнопки напрямку
+    function setupButton(btn, direction) {
+      btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        if (direction === 'up')    upPressed = true;
+        if (direction === 'down')  downPressed = true;
+        if (direction === 'left')  leftPressed = true;
+        if (direction === 'right') rightPressed = true;
+        // На перший дотик запускаємо музику, якщо звук увімкнено
+        if (!musicStarted && soundEnabled) {
+          bgMusic.play();
+          musicStarted = true;
+        }
+      });
+      btn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        if (direction === 'up')    upPressed = false;
+        if (direction === 'down')  downPressed = false;
+        if (direction === 'left')  leftPressed = false;
+        if (direction === 'right') rightPressed = false;
+      });
+      btn.addEventListener('touchcancel', function() {
+        // Якщо дотик перервано, припиняємо рух
+        if (direction === 'up')    upPressed = false;
+        if (direction === 'down')  downPressed = false;
+        if (direction === 'left')  leftPressed = false;
+        if (direction === 'right') rightPressed = false;
+      });
+      // Додаємо також події миші (для тестування на ПК)
+      btn.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        if (direction === 'up')    upPressed = true;
+        if (direction === 'down')  downPressed = true;
+        if (direction === 'left')  leftPressed = true;
+        if (direction === 'right') rightPressed = true;
+      });
+      btn.addEventListener('mouseup', function() {
+        if (direction === 'up')    upPressed = false;
+        if (direction === 'down')  downPressed = false;
+        if (direction === 'left')  leftPressed = false;
+        if (direction === 'right') rightPressed = false;
       });
     }
-    setControlsVisibility();
-    window.addEventListener('resize', setControlsVisibility);
+    setupButton(btnUp, 'up');
+    setupButton(btnDown, 'down');
+    setupButton(btnLeft, 'left');
+    setupButton(btnRight, 'right');
+    // Приховати кнопки керування на пристроях без сенсорного екрану (ПК)
+    if (!('ontouchstart' in window)) {
+      document.getElementById('controls').style.display = 'none';
+    }
+    // Перемикання звуку (іконка "звук")
+    const soundToggle = document.getElementById('soundToggle');
+    soundToggle.addEventListener('click', function() {
+      if (soundEnabled) {
+        // Вимкнути звук
+        soundEnabled = false;
+        soundToggle.src = 'icons/sound-off.png';
+        bgMusic.pause();
+      } else {
+        // Увімкнути звук
+        soundEnabled = true;
+        soundToggle.src = 'icons/sound-on.png';
+        // Запустити музику, якщо гра вже йде
+        if (!musicStarted) {
+          bgMusic.play();
+          musicStarted = true;
+        } else {
+          // Якщо музика була на паузі, продовжити
+          bgMusic.play();
+        }
+      }
+    });
+    // Основний ігровий цикл
+    let lastTime = performance.now();
+    function gameLoop(timestamp) {
+      if (gameOver) {
+        // Зупинити оновлення, гра завершена
+        return;
+      }
+      // Розрахунок дельти часу (у секундах)
+      let delta = (timestamp - lastTime) / 1000;
+      if (delta > 0.05) delta = 0.05; // обмежуємо крок, щоб уникнути різких стрибків
+      lastTime = timestamp;
+      // Рух Діни на основі натиснутих клавіш
+      let dx = 0;
+      let dy = 0;
+      if (upPressed)    dy -= DINA_SPEED * delta;
+      if (downPressed)  dy += DINA_SPEED * delta;
+      if (leftPressed)  dx -= DINA_SPEED * delta;
+      if (rightPressed) dx += DINA_SPEED * delta;
+      // Якщо рух по двох осях, нормалізуємо швидкість (діагональний рух)
+      if (dx !== 0 && dy !== 0) {
+        dx *= Math.SQRT1_2;
+        dy *= Math.SQRT1_2;
+      }
+      // Оновлення позиції Діни
+      dina.x += dx;
+      dina.y += dy;
+      // Обмежуємо вихід Діни за межі екрану
+      if (dina.x < 0) dina.x = 0;
+      if (dina.y < 0) dina.y = 0;
+      if (dina.x + dina.width > canvas.width)   dina.x = canvas.width - dina.width;
+      if (dina.y + dina.height > canvas.height) dina.y = canvas.height - dina.height;
+      // Рух яхти автоматично до поточної мушлі
+      if (shell) {
+        const vx = (shell.x + shell.width/2) - (yacht.x + yacht.width/2);
+        const vy = (shell.y + shell.height/2) - (yacht.y + yacht.height/2);
+        const dist = Math.sqrt(vx*vx + vy*vy);
+        if (dist > 0) {
+          let move = YACHT_SPEED * delta;
+          if (move > dist) move = dist;
+          const nx = vx / dist;
+          const ny = vy / dist;
+          yacht.x += nx * move;
+          yacht.y += ny * move;
+        }
+      }
+      // Перевірка зіткнення Діни з мушлею
+      let shellCollected = false;
+      if (shell) {
+        const dxCenter = (dina.x + dina.width/2) - (shell.x + shell.width/2);
+        const dyCenter = (dina.y + dina.height/2) - (shell.y + shell.height/2);
+        const distDS = Math.sqrt(dxCenter*dxCenter + dyCenter*dyCenter);
+        if (distDS < Math.max(dina.width, dina.height) * 0.5) {
+          // Діна зібрала мушлю
+          score++;
+          document.getElementById('scoreText').innerText = score;
+          shellCollected = true;
+        }
+      }
+      // Перевірка зіткнення яхти з мушлею (якщо Діна не зібрала)
+      if (shell && !shellCollected) {
+        const dxCenterY = (yacht.x + yacht.width/2) - (shell.x + shell.width/2);
+        const dyCenterY = (yacht.y + yacht.height/2) - (shell.y + shell.height/2);
+        const distYS = Math.sqrt(dxCenterY*dxCenterY + dyCenterY*dyCenterY);
+        if (distYS < Math.max(yacht.width, yacht.height) * 0.5) {
+          // Яхта дісталася мушлі першою — мушля зникає без отримання балів
+          shellCollected = true;
+        }
+      }
+      // Якщо мушлю зібрано (Діною або яхтою)
+      if (shellCollected) {
+        // Збільшуємо рівень, якщо досягнуто чергових 5 балів
+        const newLevel = Math.floor(score / 5) + 1;
+        if (newLevel > level && newLevel <= 6) {
+          level = newLevel;
+          document.getElementById('levelText').innerText = level;
+        }
+        // Створюємо нову мушлю
+        spawnShell();
+      }
+      // Промальовка фону поточного рівня
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let currentBgImage = images['bg' + level];
+      if (!currentBgImage) currentBgImage = images['bg6'];
+      ctx.drawImage(currentBgImage, 0, 0, canvas.width, canvas.height);
+      // Промальовка мушлі
+      if (shell) {
+        ctx.drawImage(images['shell'], shell.x, shell.y, shell.width, shell.height);
+      }
+      // Промальовка яхти
+      ctx.drawImage(images['yacht1'], yacht.x, yacht.y, yacht.width, yacht.height);
+      // Промальовка Діни
+      ctx.drawImage(images['dina'], dina.x, dina.y, dina.width, dina.height);
+      // Запит наступного кадру анімації
+      requestAnimationFrame(gameLoop);
+    }
   </script>
 </body>
 </html>
