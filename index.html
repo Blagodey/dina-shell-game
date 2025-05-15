@@ -3,387 +3,307 @@
 <head>
   <meta charset="UTF-8">
   <title>Діна збирає мушлі</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
     html, body {
+      height: 100%;
       margin: 0;
       padding: 0;
-      height: 100%;
-      background: #131313;
-    }
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      height: 100vh;
-      width: 100vw;
+      background: #101112;
       overflow: hidden;
     }
-    .game-container {
+    body {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    #game-container {
       position: relative;
       width: 100vw;
       height: 100vh;
-      max-width: 430px;   /* iPhone 14 Pro max-width */
-      max-height: 900px;  /* Під формат 9:16 */
+      max-width: 430px;
+      max-height: 920px;
       background: #000;
       overflow: hidden;
+      border-radius: 18px;
+      box-shadow: 0 0 32px #3339;
+    }
+    #bg-img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
     }
     #game-canvas {
-      width: 100vw;
-      height: 100vh;
-      max-width: 430px;
-      max-height: 900px;
-      display: block;
-      background: #000;
-    }
-    .score, .level, .timer {
       position: absolute;
-      color: #b0ffb7;
-      font-size: 1.2em;
-      text-shadow: 0 0 4px #000, 0 0 8px #000;
-      z-index: 10;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      z-index: 2;
       pointer-events: none;
-      user-select: none;
     }
-    .score { top: 8px; left: 12px; }
-    .level { top: 8px; right: 12px; }
-    .timer { bottom: 8px; left: 12px; }
-    .mute-btn {
+    .hud-label {
       position: absolute;
-      bottom: 8px;
-      right: 12px;
-      background: #111a;
-      border: none;
-      border-radius: 50%;
-      width: 44px; height: 44px;
-      color: #fff;
-      font-size: 1.7em;
+      color: #d8ffd0;
+      font-weight: bold;
+      font-size: 2.2vh;
+      text-shadow: 0 0 8px #000, 0 2px 4px #2b3a20b8;
+      z-index: 3;
+      user-select: none;
+      font-family: 'Segoe UI', Arial, sans-serif;
       display: flex;
       align-items: center;
-      justify-content: center;
-      z-index: 20;
-      cursor: pointer;
     }
-    .controls {
+    #level-label { left: 12px; top: 8px; }
+    #score-label { right: 12px; top: 8px; }
+    #timer-label { left: 12px; bottom: 105px; }
+    #hourglass-img {
+      width: 30px; height: 30px; margin-right: 8px;
+      filter: drop-shadow(0 2px 4px #222a);
+    }
+    /* Контроллер */
+    #controls {
       position: absolute;
-      bottom: 35px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 30;
+      bottom: 25px;
+      left: 0; right: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
-      user-select: none;
+      z-index: 10;
+      pointer-events: none;
     }
-    .row {
+    .control-row {
       display: flex;
-      flex-direction: row;
-      gap: 12px;
       justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 0;
     }
     .arrow-btn {
-      background: #18191aee;
-      border: none;
+      background: #111e;
       border-radius: 50%;
-      width: 56px; height: 56px;
-      color: #b0ffb7;
-      font-size: 2.3em;
-      box-shadow: 0 0 8px #222;
+      width: 70px; height: 70px;
+      margin: 0 10px;
+      border: 2px solid #12e3fa77;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      outline: none;
-      transition: background 0.15s;
+      box-shadow: 0 2px 12px #0005;
+      transition: background 0.1s;
+      pointer-events: auto;
+      touch-action: manipulation;
     }
     .arrow-btn:active {
-      background: #2a4630;
+      background: #34d7ff44;
     }
-    @media (max-width: 430px), (max-height: 900px) {
-      .game-container, #game-canvas {
-        max-width: 100vw;
-        max-height: 100vh;
-      }
+    .arrow-btn img {
+      width: 42px;
+      height: 42px;
+      user-select: none;
+      pointer-events: none;
+    }
+    /* Звук */
+    #sound-toggle {
+      position: absolute;
+      right: 18px;
+      bottom: 24px;
+      z-index: 11;
+      width: 56px; height: 56px;
+      background: none; border: none;
+      padding: 0;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    #sound-toggle img {
+      width: 56px; height: 56px;
+      filter: drop-shadow(0 2px 8px #222a);
+    }
+    @media (max-width: 500px) {
+      #game-container { max-width: 100vw; max-height: 100vh; }
+      .arrow-btn { width: 62px; height: 62px; }
+      #sound-toggle { width: 44px; height: 44px; }
+      #sound-toggle img { width: 44px; height: 44px; }
     }
   </style>
 </head>
 <body>
-  <div class="game-container">
-    <canvas id="game-canvas" width="360" height="640"></canvas>
-    <div class="score">Бонуси: <span id="score">0</span></div>
-    <div class="level">Рівень: <span id="level">1</span></div>
-    <div class="timer">⏳ <span id="timer">01:00</span></div>
-    <button class="mute-btn" id="mute-btn" title="Увімкнути/Вимкнути звук">🔊</button>
-    <div class="controls">
-      <div class="row">
-        <button class="arrow-btn" id="btn-up">▲</button>
+  <div id="game-container">
+    <img id="bg-img" src="backgrounds/bg1.jpg" alt="bg">
+    <canvas id="game-canvas" width="430" height="920"></canvas>
+
+    <!-- HUD -->
+    <div class="hud-label" id="level-label">Рівень: 1</div>
+    <div class="hud-label" id="score-label">Бонуси: 0</div>
+    <div class="hud-label" id="timer-label">
+      <img id="hourglass-img" src="icons/hourglass.png" alt="hourglass">
+      <span id="timer-text">00:00</span>
+    </div>
+
+    <!-- Контроллер -->
+    <div id="controls">
+      <div class="control-row">
+        <button class="arrow-btn" id="btn-up"><img src="icons/up.png" alt="up"></button>
       </div>
-      <div class="row">
-        <button class="arrow-btn" id="btn-left">◀</button>
-        <button class="arrow-btn" id="btn-down">▼</button>
-        <button class="arrow-btn" id="btn-right">▶</button>
+      <div class="control-row">
+        <button class="arrow-btn" id="btn-left"><img src="icons/left.png" alt="left"></button>
+        <button class="arrow-btn" id="btn-down"><img src="icons/down.png" alt="down"></button>
+        <button class="arrow-btn" id="btn-right"><img src="icons/right.png" alt="right"></button>
       </div>
     </div>
+
+    <!-- Звук -->
+    <button id="sound-toggle">
+      <img src="icons/sound-on.png" id="sound-img" alt="sound">
+    </button>
+
+    <!-- Музика -->
     <audio id="bg-music" src="music/yachting-song.MP3" loop></audio>
   </div>
   <script>
-    // --- Налаштування ---
-    const CANVAS_W = 360, CANVAS_H = 640; // 9:16
-    const PLAYER_W = 80, PLAYER_H = 48;
-    const SHELL_W = 42, SHELL_H = 42;
-    const MOVE_STEP = 16;
-    const LEVEL_TIME = 60; // сек
-    const PLAYER_MAX_SCALE = 3;
-
-    const backgrounds = [
-      'backgrounds/bg1.jpg','backgrounds/bg2.jpg',
-      'backgrounds/bg3.jpg','backgrounds/bg4.jpg',
-      'backgrounds/bg5.jpg','backgrounds/bg6.jpg'
-    ];
-    let level = 1, totalLevels = backgrounds.length;
-    let score = 0, timeLeft = LEVEL_TIME, timerId = null, gameOver = false;
-
-    const bg = new Image();
-    const dina = new Image();
-    const shell = new Image();
-    const yacht = new Image();
-    dina.src = 'icons/dina.png';
-    shell.src = 'icons/shell.png';
-    yacht.src = 'yachts/yacht1.png';
-
+    // --- Константи
+    const CANVAS_W = 430, CANVAS_H = 920; // формат 9:16
+    // --- Завантаження
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
+    const dinaImg = new Image();
+    dinaImg.src = 'icons/dina.png';
+    const shellImg = new Image();
+    shellImg.src = 'icons/shell.png';
+    const yachtImg = new Image();
+    yachtImg.src = 'yachts/yacht.png'; // якщо є
 
-    let player = {x: CANVAS_W/2-PLAYER_W/2, y: CANVAS_H/2-PLAYER_H/2};
-    let shellPos = randomShell();
-    let shellAnim = {scale: 1, fade: 1, show: true};
-    let yachtPos = {x: Math.random()*(CANVAS_W-90), y: Math.random()*(CANVAS_H-110)};
-    let yachtSpeed = 1.0; // спочатку повільніше
+    // --- Гра: стан
+    let dina = { x: CANVAS_W/2, y: CANVAS_H/2, size: 90, maxSize: 270, scale: 1 };
+    let shell = { x: 80, y: 300, size: 50, collected: false };
+    let level = 1, score = 0, timer = 30, gameRunning = true;
+    let moveDir = {x: 0, y: 0};
+    let musicOn = true;
 
-    // --- Музика ---
-    const music = document.getElementById('bg-music');
-    let muted = false;
-    document.getElementById('mute-btn').onclick = function() {
-      muted = !muted;
-      music.muted = muted;
-      this.innerText = muted ? '🔇' : '🔊';
-      if (!music.paused && !muted) music.play();
-    };
-    window.addEventListener('keydown', () => {
-      if (music.paused && !muted) music.play();
+    // --- Фоновий звук
+    const bgMusic = document.getElementById('bg-music');
+    bgMusic.volume = 0.22;
+
+    // Автоматичне відтворення на дотику (моб. браузери)
+    document.body.addEventListener('touchstart', () => {
+      if (musicOn) bgMusic.play();
+    }, {once:true});
+    document.body.addEventListener('click', () => {
+      if (musicOn) bgMusic.play();
     }, {once:true});
 
-    // --- Таймер ---
-    function startTimer() {
-      clearInterval(timerId);
-      timerId = setInterval(()=>{
-        if (--timeLeft<=0) {
-          timeLeft = 0;
-          level++;
-          if (level <= totalLevels) {
-            setLevel(level);
-            shellPos = randomShell();
-            player = {x: CANVAS_W/2-PLAYER_W/2, y: CANVAS_H/2-PLAYER_H/2};
-            shellAnim = {scale:1, fade:1, show:true};
-            draw();
-          } else {
-            gameOver = true;
-            clearInterval(timerId);
-          }
-        }
-        updateTimer();
-      }, 1000);
-    }
-    function updateTimer() {
-      let min = Math.floor(timeLeft/60).toString().padStart(2,'0');
-      let sec = (timeLeft%60).toString().padStart(2,'0');
-      document.getElementById('timer').innerText = `${min}:${sec}`;
-    }
+    // --- Кнопки управління
+    document.getElementById('btn-up').addEventListener('touchstart', e => {moveDir.y = -1; e.preventDefault();});
+    document.getElementById('btn-up').addEventListener('touchend', e => {moveDir.y = 0; e.preventDefault();});
+    document.getElementById('btn-down').addEventListener('touchstart', e => {moveDir.y = 1; e.preventDefault();});
+    document.getElementById('btn-down').addEventListener('touchend', e => {moveDir.y = 0; e.preventDefault();});
+    document.getElementById('btn-left').addEventListener('touchstart', e => {moveDir.x = -1; e.preventDefault();});
+    document.getElementById('btn-left').addEventListener('touchend', e => {moveDir.x = 0; e.preventDefault();});
+    document.getElementById('btn-right').addEventListener('touchstart', e => {moveDir.x = 1; e.preventDefault();});
+    document.getElementById('btn-right').addEventListener('touchend', e => {moveDir.x = 0; e.preventDefault();});
 
-    // --- Рівень ---
-    function setLevel(newLevel) {
-      level = newLevel;
-      if (level > totalLevels) {
-        gameOver = true;
-        clearInterval(timerId);
-        draw();
-        setTimeout(()=>alert('Гру завершено! Ваш результат: '+score), 100);
-        return;
-      }
-      bg.src = backgrounds[level-1];
-      document.getElementById('level').innerText = level;
-      timeLeft = LEVEL_TIME;
-      updateTimer();
-      // Змінити швидкість яхти (плавно)
-      yachtSpeed = 1.0 + (level-1)*0.7;
-    }
+    // Для миші та клавіатури
+    document.getElementById('btn-up').addEventListener('mousedown', e => {moveDir.y = -1;});
+    document.getElementById('btn-up').addEventListener('mouseup', e => {moveDir.y = 0;});
+    document.getElementById('btn-down').addEventListener('mousedown', e => {moveDir.y = 1;});
+    document.getElementById('btn-down').addEventListener('mouseup', e => {moveDir.y = 0;});
+    document.getElementById('btn-left').addEventListener('mousedown', e => {moveDir.x = -1;});
+    document.getElementById('btn-left').addEventListener('mouseup', e => {moveDir.x = 0;});
+    document.getElementById('btn-right').addEventListener('mousedown', e => {moveDir.x = 1;});
+    document.getElementById('btn-right').addEventListener('mouseup', e => {moveDir.x = 0;});
 
-    // --- Генерація мушлі та яхти ---
-    function randomShell() {
-      return {
-        x: Math.random()*(CANVAS_W-SHELL_W),
-        y: Math.random()*(CANVAS_H-SHELL_H)
+    // --- Звук
+    const soundBtn = document.getElementById('sound-toggle');
+    const soundImg = document.getElementById('sound-img');
+    soundBtn.addEventListener('click', () => {
+      musicOn = !musicOn;
+      if (musicOn) {
+        bgMusic.play();
+        soundImg.src = 'icons/sound-on.png';
+      } else {
+        bgMusic.pause();
+        soundImg.src = 'icons/sound-off.png';
       }
-    }
-    function resetYacht() {
-      yachtPos = {x: Math.random()*(CANVAS_W-90), y: Math.random()*(CANVAS_H-110)};
-    }
-
-    // --- Головна анімація ---
-    function draw() {
-      ctx.clearRect(0,0,CANVAS_W,CANVAS_H);
-      if (bg.complete) ctx.drawImage(bg, 0, 0, CANVAS_W, CANVAS_H);
-      // Яхта
-      if (yacht.complete) ctx.drawImage(yacht, yachtPos.x, yachtPos.y, 90, 110);
-      // Мушля
-      if (shellAnim.show && shell.complete) {
-        ctx.save();
-        ctx.globalAlpha = shellAnim.fade;
-        ctx.translate(shellPos.x+SHELL_W/2, shellPos.y+SHELL_H/2);
-        ctx.scale(shellAnim.scale, shellAnim.scale);
-        ctx.drawImage(shell, -SHELL_W/2, -SHELL_H/2, SHELL_W, SHELL_H);
-        ctx.restore();
-      }
-      // Діна (збільшення до 3х)
-      let playerScale = Math.min(1 + score * 0.01, PLAYER_MAX_SCALE);
-      if (dina.complete) {
-        ctx.save();
-        ctx.translate(player.x + PLAYER_W/2, player.y + PLAYER_H/2);
-        ctx.scale(playerScale, playerScale);
-        ctx.drawImage(dina, -PLAYER_W/2, -PLAYER_H/2, PLAYER_W, PLAYER_H);
-        ctx.restore();
-      }
-      // Бульбашки
-      bubbles.forEach(b=>{
-        ctx.save();
-        ctx.globalAlpha = b.alpha;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
-        ctx.fillStyle = '#b6f5ff88';
-        ctx.fill();
-        ctx.restore();
-      });
-    }
-
-    // --- Рух яхти до мушлі ---
-    function moveYacht() {
-      let dx = shellPos.x - yachtPos.x;
-      let dy = shellPos.y - yachtPos.y;
-      let len = Math.sqrt(dx*dx + dy*dy);
-      if (len>1) {
-        yachtPos.x += dx/len * yachtSpeed;
-        yachtPos.y += dy/len * yachtSpeed;
-      }
-    }
-
-    // --- Бульбашки (анімація) ---
-    let bubbles = [];
-    function updateBubbles() {
-      // Додаємо нову бульбашку випадково
-      if (Math.random() < 0.04 && bubbles.length < 16) {
-        bubbles.push({
-          x: Math.random()*CANVAS_W,
-          y: CANVAS_H + 40,
-          r: 16+Math.random()*22,
-          alpha: 0.18+Math.random()*0.17,
-          speed: 0.6+Math.random()*1.6
-        });
-      }
-      // Анімація всіх бульбашок
-      for(let b of bubbles) b.y -= b.speed;
-      // Видалити ті, що вийшли за межі
-      bubbles = bubbles.filter(b => b.y + b.r > -20);
-    }
-
-    // --- Кнопки управління ---
-    function movePlayer(dx, dy) {
-      let playerScale = Math.min(1 + score * 0.01, PLAYER_MAX_SCALE);
-      let w = PLAYER_W*playerScale, h = PLAYER_H*playerScale;
-      player.x = Math.max(0, Math.min(CANVAS_W-w, player.x+dx));
-      player.y = Math.max(0, Math.min(CANVAS_H-h, player.y+dy));
-      draw();
-      checkCatch();
-    }
-    document.getElementById('btn-up').onclick = ()=>movePlayer(0, -MOVE_STEP);
-    document.getElementById('btn-down').onclick = ()=>movePlayer(0, MOVE_STEP);
-    document.getElementById('btn-left').onclick = ()=>movePlayer(-MOVE_STEP, 0);
-    document.getElementById('btn-right').onclick = ()=>movePlayer(MOVE_STEP, 0);
-
-    // --- Перевірка зіткнень ---
-    function checkCatch() {
-      let playerScale = Math.min(1 + score * 0.01, PLAYER_MAX_SCALE);
-      let w = PLAYER_W*playerScale, h = PLAYER_H*playerScale;
-      if (!shellAnim.show) return;
-      if (player.x < shellPos.x+SHELL_W && player.x+w > shellPos.x &&
-          player.y < shellPos.y+SHELL_H && player.y+h > shellPos.y) {
-        score++;
-        document.getElementById('score').innerText = score;
-        animateShellCatch(()=>{
-          shellPos = randomShell();
-          shellAnim = {scale:1, fade:1, show:true};
-          draw();
-        });
-      }
-      // Якщо яхта "збирає"
-      if (yachtPos.x < shellPos.x+SHELL_W && yachtPos.x+90 > shellPos.x &&
-          yachtPos.y < shellPos.y+SHELL_H && yachtPos.y+110 > shellPos.y) {
-        shellAnim.show = false;
-        setTimeout(()=>{
-          shellPos = randomShell();
-          resetYacht();
-          shellAnim = {scale:1, fade:1, show:true};
-          draw();
-        }, 350);
-      }
-    }
-
-    // --- Анімація мушлі при зборі ---
-    function animateShellCatch(cb) {
-      shellAnim.show = true;
-      shellAnim.scale = 1; shellAnim.fade = 1;
-      let steps = 16, frame = 0;
-      function step() {
-        shellAnim.scale = 1 + 0.4*Math.sin(Math.PI*frame/steps);
-        shellAnim.fade = 1 - frame/steps;
-        draw();
-        if (++frame<=steps) requestAnimationFrame(step);
-        else { shellAnim.show = false; cb(); }
-      }
-      step();
-    }
-
-    // --- Керування клавішами для десктопу ---
-    window.addEventListener('keydown', e=>{
-      if (gameOver) return;
-      if (['ArrowUp','w','ц'].includes(e.key)) movePlayer(0, -MOVE_STEP);
-      if (['ArrowDown','s','ы'].includes(e.key)) movePlayer(0, MOVE_STEP);
-      if (['ArrowLeft','a','ф'].includes(e.key)) movePlayer(-MOVE_STEP, 0);
-      if (['ArrowRight','d','в'].includes(e.key)) movePlayer(MOVE_STEP, 0);
     });
 
-    // --- Основний цикл ---
+    // --- Управління з клавіатури
+    window.addEventListener('keydown', (e) => {
+      switch(e.key) {
+        case 'ArrowUp': moveDir.y = -1; break;
+        case 'ArrowDown': moveDir.y = 1; break;
+        case 'ArrowLeft': moveDir.x = -1; break;
+        case 'ArrowRight': moveDir.x = 1; break;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (['ArrowUp','ArrowDown'].includes(e.key)) moveDir.y = 0;
+      if (['ArrowLeft','ArrowRight'].includes(e.key)) moveDir.x = 0;
+    });
+
+    // --- Ігровий цикл
     function gameLoop() {
-      moveYacht();
-      updateBubbles();
-      draw();
-      checkCatch();
-      if (!gameOver) requestAnimationFrame(gameLoop);
+      // Рух
+      let speed = 3 + (level-1)*0.5; // на перших рівнях повільніше
+      if (level < 3) speed /= 2.5;
+      dina.x += moveDir.x * speed;
+      dina.y += moveDir.y * speed;
+      // Кордони
+      dina.x = Math.max(0, Math.min(CANVAS_W-dina.size, dina.x));
+      dina.y = Math.max(0, Math.min(CANVAS_H-dina.size, dina.y));
+
+      // Збір мушлі
+      let dist = Math.hypot(dina.x-shell.x, dina.y-shell.y);
+      if (dist < (dina.size+shell.size)/2 && !shell.collected) {
+        shell.collected = true;
+        score += 10;
+        // Збільшуємо Діну (макс 3x)
+        if (dina.scale < 3) dina.scale += 0.1;
+        dina.size = 90 * dina.scale;
+        setTimeout(spawnShell, 700);
+      }
+
+      // Малювання
+      ctx.clearRect(0,0,CANVAS_W,CANVAS_H);
+
+      // Мушля
+      if (!shell.collected) ctx.drawImage(shellImg, shell.x, shell.y, shell.size, shell.size);
+
+      // Діна
+      ctx.drawImage(dinaImg, dina.x, dina.y, dina.size, dina.size);
+
+      // (Якщо потрібно — яхта)
+      // ctx.drawImage(yachtImg, ...)
+
+      // Оновлення HUD
+      document.getElementById('level-label').innerText = 'Рівень: ' + level;
+      document.getElementById('score-label').innerText = 'Бонуси: ' + score;
+      document.getElementById('timer-text').innerText = ("00:" + timer.toString().padStart(2,'0'));
+
+      if (gameRunning) requestAnimationFrame(gameLoop);
     }
 
-    // --- Запуск гри після завантаження ---
-    let loaded = 0;
-    [bg, dina, shell, yacht].forEach(img => {
-      img.onload = ()=>{ loaded++; if (loaded==4) startGame(); }
-    });
-    bg.src = backgrounds[0];
-    function startGame() {
-      setLevel(1);
-      draw();
-      startTimer();
-      gameLoop();
+    function spawnShell() {
+      shell.x = Math.random() * (CANVAS_W-60) + 30;
+      shell.y = Math.random() * (CANVAS_H-200) + 60;
+      shell.collected = false;
     }
+
+    // --- Таймер
+    setInterval(() => {
+      if (!gameRunning) return;
+      timer--;
+      if (timer<=0) {
+        // Кінець рівня
+        level++; timer = 30;
+        dina.scale = 1; dina.size = 90; // reset
+      }
+    }, 1000);
+
+    // --- Старт
+    dinaImg.onload = shellImg.onload = () => { gameLoop(); }
+
   </script>
 </body>
 </html>
