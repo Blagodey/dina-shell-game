@@ -325,30 +325,30 @@
         <canvas id="gameCanvas"></canvas>
         <div id="hud">
             <div class="hud-item">
-                <img src="/dina-shell-game/icons/shell.png" class="hud-icon" alt="Shell">
+                <img src="icons/shell.png" class="hud-icon" alt="Shell">
                 <span id="scoreText">0</span>
             </div>
             <div class="hud-item">
-                <img src="/dina-shell-game/icons/hourglass.png" class="hud-icon" alt="Timer">
+                <img src="icons/hourglass.png" class="hud-icon" alt="Timer">
                 <span id="timeText">00:00</span>
                 <span class="level-text">Рівень: <span id="levelText">1</span></span>
             </div>
         </div>
         <button id="soundToggle">
-            <img src="/dina-shell-game/icons/sound-on.png" alt="Sound">
+            <img src="icons/sound-on.png" alt="Sound">
         </button>
         <div id="controls">
             <div class="control-btn" id="btnLeft">
-                <img src="/dina-shell-game/icons/left.png" alt="Left">
+                <img src="icons/left.png" alt="Left">
             </div>
             <div class="control-btn" id="btnUp">
-                <img src="/dina-shell-game/icons/up.png" alt="Up">
+                <img src="icons/up.png" alt="Up">
             </div>
             <div class="control-btn" id="btnDown">
-                <img src="/dina-shell-game/icons/down.png" alt="Down">
+                <img src="icons/down.png" alt="Down">
             </div>
             <div class="control-btn" id="btnRight">
-                <img src="/dina-shell-game/icons/right.png" alt="Right">
+                <img src="icons/right.png" alt="Right">
             </div>
         </div>
     </div>
@@ -440,7 +440,7 @@
             yacht: new Image(),
             shell: new Image(),
             backgrounds: Array(MAX_LEVEL).fill(null).map(() => new Image()),
-            audio: new Audio('/dina-shell-game/music/yachting-song.MP3')
+            audio: new Audio('music/yachting-song.MP3')
         };
 
         // Инициализация canvas
@@ -469,20 +469,20 @@
             // Загружаем ресурсы с проверкой и обработкой ошибок
             resources.dina.onload = () => console.log('Dina sprite loaded successfully');
             resources.dina.onerror = (e) => console.error('Failed to load Dina sprite:', e);
-            resources.dina.src = '/dina-shell-game/icons/dina.png';
+            resources.dina.src = 'icons/dina.png';
             
             resources.shell.onload = () => console.log('Shell sprite loaded successfully');
             resources.shell.onerror = (e) => console.error('Failed to load shell sprite:', e);
-            resources.shell.src = '/dina-shell-game/icons/shell.png';
+            resources.shell.src = 'icons/shell.png';
             
             resources.yacht.onload = () => console.log('Yacht loaded successfully');
             resources.yacht.onerror = (e) => console.error('Failed to load yacht:', e);
-            resources.yacht.src = '/dina-shell-game/icons/yacht1.png';
+            resources.yacht.src = 'icons/yacht1.png';
 
             resources.backgrounds.forEach((bg, i) => {
                 bg.onload = () => console.log(`Background ${i + 1} loaded successfully`);
                 bg.onerror = (e) => console.error(`Failed to load background ${i + 1}:`, e);
-                bg.src = `/dina-shell-game/backgrounds/bg${i + 1}.jpg`;
+                bg.src = `backgrounds/bg${i + 1}.jpg`;
             });
 
             // Инициализируем размеры
@@ -494,10 +494,10 @@
             
             // Проверяем наличие файлов перед запуском
             const resourceChecks = [
-                checkImage('/dina-shell-game/icons/dina.png'),
-                checkImage('/dina-shell-game/icons/yacht1.png'),
-                checkImage('/dina-shell-game/icons/shell.png'),
-                ...Array(MAX_LEVEL).fill().map((_, i) => checkImage(`/dina-shell-game/backgrounds/bg${i + 1}.jpg`))
+                checkImage('icons/dina.png'),
+                checkImage('icons/yacht1.png'),
+                checkImage('icons/shell.png'),
+                ...Array(MAX_LEVEL).fill().map((_, i) => checkImage(`backgrounds/bg${i + 1}.jpg`))
             ];
 
             const results = await Promise.all(resourceChecks);
@@ -955,7 +955,7 @@
                     soundEnabled = !soundEnabled;
                     const img = soundToggle.querySelector('img');
                     if (img) {
-                        img.src = soundEnabled ? '/dina-shell-game/icons/sound-on.png' : '/dina-shell-game/icons/sound-off.png';
+                        img.src = soundEnabled ? 'icons/sound-on.png' : 'icons/sound-off.png';
                     }
                     if (soundEnabled) {
                         tryPlayAudio();
