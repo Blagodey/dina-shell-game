@@ -2,437 +2,518 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Dina збирає мушлі</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Діна збирає мушлі</title>
   <style>
-    /* 2. Disable text selection and copying for HUD and buttons */
-    body {
+    html, body {
       margin: 0;
       padding: 0;
-      overflow: hidden; /* Prevent scrolling (especially on mobile) */
-      -webkit-touch-callout: none; /* Disable callout (copy/save menu) on long-press */
-      user-select: none; /* Disable text selection globally */
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+    body {
+      touch-action: none;
+      user-select: none;
       -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    canvas {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #000;
     }
     #hud {
-      position: fixed;
-      top: env(safe-area-inset-top, 0);
-      left: env(safe-area-inset-left, 0);
-      right: env(safe-area-inset-right, 0);
-      padding: 5px 10px;
-      background: rgba(0, 0, 0, 0.5);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
       color: #fff;
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       font-size: 18px;
-      z-index: 1000;
+      background: rgba(60, 60, 60, 0.7);
+      /* Safe area padding for notch (top, left, right) */
+      padding-top: constant(safe-area-inset-top);
+      padding-top: env(safe-area-inset-top);
+      padding-right: calc(10px + constant(safe-area-inset-right));
+      padding-right: calc(10px + env(safe-area-inset-right));
+      padding-bottom: 5px;
+      padding-left: calc(10px + constant(safe-area-inset-left));
+      padding-left: calc(10px + env(safe-area-inset-left));
+      box-sizing: border-box;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      -webkit-user-select: none;
-      user-select: none;
+      justify-content: space-between;
     }
-    #hud span {
-      margin-right: 15px;
+    #hud-left span {
+      margin-left: 8px;
     }
-    #hud img {
+    #hud .timer-icon, #hud img {
       vertical-align: middle;
-      width: 32px;
-      height: 32px;
+    }
+    #soundIcon {
+      width: 24px;
+      height: 24px;
       cursor: pointer;
-    }
-    #controls {
-      position: fixed;
-      bottom: calc(env(safe-area-inset-bottom, 0) + 10px);
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      display: grid;
-      grid-template-columns: 60px 60px 60px;
-      grid-template-rows: 60px 60px 60px;
-      justify-content: center;
-      align-content: center;
-      touch-action: none;
-      -webkit-user-select: none;
       user-select: none;
-    }
-    .control-btn {
-      width: 60px;
-      height: 60px;
-      background: rgba(0, 0, 0, 0.3);
-      color: #fff;
-      font-size: 32px;
-      text-align: center;
-      line-height: 60px;
-      border: none;
-      border-radius: 50%;
-      outline: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
     }
-    .control-btn:active {
-      background: rgba(0, 0, 0, 0.5);
+    #controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      padding-bottom: constant(safe-area-inset-bottom);
+      padding-bottom: env(safe-area-inset-bottom);
+      box-sizing: border-box;
     }
-    /* Positioning the arrow buttons in a D-pad layout */
-    #btnUp   { grid-row: 1; grid-column: 2; }
-    #btnLeft { grid-row: 2; grid-column: 1; }
-    #btnRight{ grid-row: 2; grid-column: 3; }
-    #btnDown { grid-row: 3; grid-column: 2; }
+    .ctrl-btn {
+      display: inline-block;
+      width: 18vw;
+      max-width: 90px;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ctrl-btn:focus {
+      outline: none;
+    }
   </style>
 </head>
 <body>
-  <!-- HUD (shell count, timer, level, sound icon) -->
-  <div id="hud">
-    <span id="shellCountLabel">Мушлі: <span id="shellCount">0</span></span>
-    <span id="timerLabel">Час: <span id="timer">00:00</span></span>
-    <span id="levelLabel">Рівень: <span id="level">1</span></span>
-    <img id="soundIcon" src="sound-on.png" alt="Sound On/Off" />
-  </div>
-  <!-- Game canvas -->
+  <!-- Game Canvas -->
   <canvas id="gameCanvas"></canvas>
-  <!-- On-screen controls for mobile (transparent arrow buttons) -->
-  <div id="controls">
-    <div class="control-btn" id="btnUp">&#9650;</div>
-    <div class="control-btn" id="btnLeft">&#9664;</div>
-    <div class="control-btn" id="btnRight">&#9654;</div>
-    <div class="control-btn" id="btnDown">&#9660;</div>
+
+  <!-- Heads-Up Display (HUD) -->
+  <div id="hud">
+    <div id="hud-left">
+      <img src="icons/shell.png" alt="Shell" />
+      <span id="shellCount">0</span>
+      <span id="timer">
+        <span class="timer-icon">⏳</span>
+        <span id="time">00:00</span>
+      </span>
+      <span id="level">Рівень: 1</span>
+    </div>
+    <img id="soundIcon" src="icons/sound-on.png" alt="Sound" />
   </div>
-  <!-- Background music -->
-  <audio id="bgm" src="music/yachting-song.MP3" loop preload="auto"></audio>
+
+  <!-- On-screen Controls -->
+  <div id="controls">
+    <img src="icons/left.png" id="leftBtn" class="ctrl-btn" alt="Left" />
+    <img src="icons/up.png" id="upBtn" class="ctrl-btn" alt="Up" />
+    <img src="icons/down.png" id="downBtn" class="ctrl-btn" alt="Down" />
+    <img src="icons/right.png" id="rightBtn" class="ctrl-btn" alt="Right" />
+  </div>
+
+  <!-- Background Music -->
+  <audio id="bgMusic" src="music/yachting-song.MP3" loop></audio>
+
   <script>
-    // Canvas and context
+    // Canvas setup for full-screen 9:16 aspect ratio
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    // Game objects and variables
-    let screenW, screenH, marginX, marginY;
-    let Dina, shell, yacht;
-    let level = 1;
-    let shellsCollected = 0;
-    let startTime;
-    let lastTime;
-    let soundOn = true;
-    // Control flags for movement
-    let upPressed = false, downPressed = false, leftPressed = false, rightPressed = false;
-    // Speed constants (pixels per second)
-    const DINA_SPEED = 150;
-    const YACHT_SPEED = 100;
-    // Images and assets
-    const dinaImg = new Image();
+    let gameWidth, gameHeight;
+    let visibleWidth, visibleHeight;
+    let offsetX = 0, offsetY = 0;
+
+    function resizeCanvas() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const targetAspect = 9 / 16;
+      let newWidth, newHeight;
+      if (w / h < targetAspect) {
+        // Screen is taller/narrower than 9:16 – use full height, extend width
+        newHeight = h;
+        newWidth = h * targetAspect;
+      } else {
+        // Screen is wider than 9:16 – use full width, extend height
+        newWidth = w;
+        newHeight = w * (16 / 9);
+      }
+      // Adjust for device pixel ratio for sharpness
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = newWidth * ratio;
+      canvas.height = newHeight * ratio;
+      canvas.style.width = newWidth + 'px';
+      canvas.style.height = newHeight + 'px';
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      // Save canvas and visible dimensions
+      gameWidth = newWidth;
+      gameHeight = newHeight;
+      visibleWidth = w;
+      visibleHeight = h;
+      // Compute offset (cropped) to center canvas content on screen
+      offsetX = (gameWidth - visibleWidth) / 2;
+      offsetY = (gameHeight - visibleHeight) / 2;
+    }
+
+    // Initial sizing and update on window resize/orientation change
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Load images and assets
+    const playerImg = new Image();
+    playerImg.src = 'icons/dina.png';
     const shellImg = new Image();
+    shellImg.src = 'icons/shell.png';
     const yachtImg = new Image();
+    yachtImg.src = 'yachts/yacht1.png';
+    // Preload background images for levels 1-6
     const bgImages = [];
     for (let i = 1; i <= 6; i++) {
       bgImages[i] = new Image();
+      bgImages[i].src = 'backgrounds/bg' + i + '.jpg';
     }
-    // Preload sound-off icon to avoid delay on toggle
-    const soundOffImg = new Image();
-    soundOffImg.src = 'sound-off.png';
-    // Asset loading tracker
-    let assetsLoaded = 0;
-    const totalAssets = 3 + 6; // Dina, shell, yacht + 6 background images
-    function assetLoaded() {
-      assetsLoaded++;
-      if (assetsLoaded >= totalAssets) {
-        startGame();
-      }
+    // Sound icon image paths (for toggling)
+    const soundOnImg = 'icons/sound-on.png';
+    const soundOffImg = 'icons/sound-off.png';
+
+    // Game state variables
+    let level = 1;
+    let lastTime = null;
+    let shellsCollected = 0;
+    let timerSeconds = 0;
+    let isSoundOn = true;
+
+    // Player (Dina) properties
+    let dinaX, dinaY;
+    let dinaScale = 1;
+    const baseDinaScale = 1;
+    const maxDinaScale = 3;
+    const dinaSpeed = 4;  // Dina movement speed (pixels per frame)
+
+    // Yacht (enemy) properties
+    let yachtX, yachtY;
+    let yachtSpeed = 2;   // initial yacht speed, increases each level
+
+    // Shell (collectible) properties
+    let shellX, shellY;
+    let shellPresent = false;
+
+    // Movement control flags
+    let moveUp = false, moveDown = false, moveLeft = false, moveRight = false;
+
+    // Format time as MM:SS
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
     }
-    // Set asset onload handlers
-    dinaImg.onload = assetLoaded;
-    shellImg.onload = assetLoaded;
-    yachtImg.onload = assetLoaded;
-    for (let i = 1; i <= 6; i++) {
-      bgImages[i].onload = assetLoaded;
+
+    // HUD elements for dynamic updates
+    const timeElem = document.getElementById('time');
+    const shellCountElem = document.getElementById('shellCount');
+    const levelElem = document.getElementById('level');
+
+    function updateTimerDisplay() {
+      timeElem.textContent = formatTime(timerSeconds);
     }
-    // Set image sources (ensure these files exist in correct paths)
-    dinaImg.src = 'dina.png';
-    shellImg.src = 'shell.png';
-    yachtImg.src = 'yacht.png';
-    for (let i = 1; i <= 6; i++) {
-      bgImages[i].src = 'bg' + i + '.jpg';
+    function updateHUD() {
+      shellCountElem.textContent = shellsCollected;
+      levelElem.textContent = 'Рівень: ' + level;
     }
-    // Resize canvas to full screen with 9:16 aspect ratio (no black bars)
-    function resizeCanvas() {
-      screenW = window.innerWidth;
-      screenH = window.innerHeight;
-      const targetRatio = 9 / 16;
-      const screenRatio = screenW / screenH;
-      if (screenRatio < targetRatio) {
-        // Screen is taller (narrower) than 9:16
-        canvas.height = screenH;
-        canvas.width = Math.floor(screenH * targetRatio);
-      } else {
-        // Screen is wider than 9:16
-        canvas.width = screenW;
-        canvas.height = Math.floor(screenW * (16 / 9));
-      }
-      // Center canvas
-      canvas.style.position = 'fixed';
-      canvas.style.top = '50%';
-      canvas.style.left = '50%';
-      canvas.style.transform = 'translate(-50%, -50%)';
-      // Calculate margins (canvas overflow beyond screen)
-      marginX = Math.max(0, (canvas.width - screenW) / 2);
-      marginY = Math.max(0, (canvas.height - screenH) / 2);
-      // Re-center Dina if exists (e.g., after orientation change)
-      if (Dina) {
-        Dina.x = marginX + screenW / 2;
-        Dina.y = marginY + screenH / 2;
-      }
-    }
-    window.addEventListener('resize', () => {
-      resizeCanvas();
-      // On resize, remove current shell/yacht and spawn a new shell
-      if (shell) shell.active = false;
-      if (yacht) yacht.active = false;
-      spawnShell();
-    });
-    // Start game after all assets are loaded
-    function startGame() {
-      resizeCanvas();
-      // Initialize Dina at screen center
-      Dina = {
-        img: dinaImg,
-        width: dinaImg.width,
-        height: dinaImg.height,
-        x: marginX + screenW / 2,
-        y: marginY + screenH / 2,
-        scale: 1
-      };
-      // Initialize shell and yacht objects
-      shell = { img: shellImg, width: shellImg.width, height: shellImg.height, x: 0, y: 0, active: false };
-      yacht = { img: yachtImg, width: yachtImg.width, height: yachtImg.height, x: 0, y: 0, vx: 0, active: false };
-      shellsCollected = 0;
-      level = 1;
-      // Set initial HUD values
-      document.getElementById('shellCount').textContent = shellsCollected;
-      document.getElementById('level').textContent = level;
-      document.getElementById('timer').textContent = '00:00';
-      document.getElementById('soundIcon').src = 'sound-on.png';
-      // Start timer
-      startTime = Date.now();
-      // Keyboard controls for desktop
-      document.addEventListener('keydown', e => {
-        if (e.key === 'ArrowLeft' || e.key === 'Left') {
-          leftPressed = true;
-          e.preventDefault();
-        } else if (e.key === 'ArrowRight' || e.key === 'Right') {
-          rightPressed = true;
-          e.preventDefault();
-        } else if (e.key === 'ArrowUp' || e.key === 'Up') {
-          upPressed = true;
-          e.preventDefault();
-        } else if (e.key === 'ArrowDown' || e.key === 'Down') {
-          downPressed = true;
-          e.preventDefault();
-        }
-        // Start music on first user interaction if sound is on
-        if (soundOn) {
-          const bgmAudio = document.getElementById('bgm');
-          if (bgmAudio.paused) {
-            bgmAudio.play().catch(err => { /* ignore autoplay errors */ });
-          }
-        }
-      });
-      document.addEventListener('keyup', e => {
-        if (e.key === 'ArrowLeft' || e.key === 'Left') {
-          leftPressed = false;
-          e.preventDefault();
-        } else if (e.key === 'ArrowRight' || e.key === 'Right') {
-          rightPressed = false;
-          e.preventDefault();
-        } else if (e.key === 'ArrowUp' || e.key === 'Up') {
-          upPressed = false;
-          e.preventDefault();
-        } else if (e.key === 'ArrowDown' || e.key === 'Down') {
-          downPressed = false;
-          e.preventDefault();
-        }
-      });
-      // Touch and mouse controls for on-screen buttons
-      function onControlStart(dir) {
-        if (dir === 'left') leftPressed = true;
-        if (dir === 'right') rightPressed = true;
-        if (dir === 'up') upPressed = true;
-        if (dir === 'down') downPressed = true;
-        // Start music on first touch if sound is on
-        if (soundOn) {
-          const bgmAudio = document.getElementById('bgm');
-          if (bgmAudio.paused) {
-            bgmAudio.play().catch(err => {});
-          }
-        }
-      }
-      function onControlEnd(dir) {
-        if (dir === 'left') leftPressed = false;
-        if (dir === 'right') rightPressed = false;
-        if (dir === 'up') upPressed = false;
-        if (dir === 'down') downPressed = false;
-      }
-      const btnLeft = document.getElementById('btnLeft');
-      const btnRight = document.getElementById('btnRight');
-      const btnUp = document.getElementById('btnUp');
-      const btnDown = document.getElementById('btnDown');
-      // Touch events (prevent default to avoid text selection or scrolling)
-      btnLeft.addEventListener('touchstart', e => { e.preventDefault(); onControlStart('left'); });
-      btnLeft.addEventListener('touchend', e => { e.preventDefault(); onControlEnd('left'); });
-      btnRight.addEventListener('touchstart', e => { e.preventDefault(); onControlStart('right'); });
-      btnRight.addEventListener('touchend', e => { e.preventDefault(); onControlEnd('right'); });
-      btnUp.addEventListener('touchstart', e => { e.preventDefault(); onControlStart('up'); });
-      btnUp.addEventListener('touchend', e => { e.preventDefault(); onControlEnd('up'); });
-      btnDown.addEventListener('touchstart', e => { e.preventDefault(); onControlStart('down'); });
-      btnDown.addEventListener('touchend', e => { e.preventDefault(); onControlEnd('down'); });
-      // Mouse events for desktop (optional)
-      btnLeft.addEventListener('mousedown', () => onControlStart('left'));
-      btnLeft.addEventListener('mouseup', () => onControlEnd('left'));
-      btnRight.addEventListener('mousedown', () => onControlStart('right'));
-      btnRight.addEventListener('mouseup', () => onControlEnd('right'));
-      btnUp.addEventListener('mousedown', () => onControlStart('up'));
-      btnUp.addEventListener('mouseup', () => onControlEnd('up'));
-      btnDown.addEventListener('mousedown', () => onControlStart('down'));
-      btnDown.addEventListener('mouseup', () => onControlEnd('down'));
-      // Sound toggle button
-      const soundIcon = document.getElementById('soundIcon');
-      soundIcon.addEventListener('click', () => {
-        const bgmAudio = document.getElementById('bgm');
-        if (soundOn) {
-          // Turn sound off
-          soundOn = false;
-          soundIcon.src = 'sound-off.png';
-          bgmAudio.pause();
-        } else {
-          // Turn sound on
-          soundOn = true;
-          soundIcon.src = 'sound-on.png';
-          bgmAudio.play().catch(err => {});
-        }
-      });
-      // Prevent context menu (right-click or long-press)
-      document.addEventListener('contextmenu', e => {
-        e.preventDefault();
-      });
-      // Spawn the first shell and start the game loop
-      spawnShell();
-      requestAnimationFrame(gameLoop);
-    }
-    // Spawn a new shell and a yacht moving toward it
+
+    // Spawn a shell at a random position within visible game area (with margins)
     function spawnShell() {
-      if (!shell || !yacht) return;
-      // Shell at random position within visible area
-      const xRange = screenW - shell.width;
-      const yRange = screenH - shell.height;
-      shell.x = marginX + shell.width/2 + Math.random() * xRange;
-      shell.y = marginY + shell.height/2 + Math.random() * yRange;
-      shell.active = true;
-      // Yacht starts from left or right edge
-      yacht.active = true;
-      if (Math.random() < 0.5) {
-        // From left side
-        yacht.x = marginX - yacht.width;
-        yacht.vx = YACHT_SPEED;
-      } else {
-        // From right side
-        yacht.x = marginX + screenW + yacht.width;
-        yacht.vx = -YACHT_SPEED;
-      }
-      yacht.y = shell.y;
+      const margin = 20;
+      const xRange = visibleWidth - margin * 2;
+      const yRange = visibleHeight - margin * 2;
+      shellX = offsetX + margin + Math.random() * xRange;
+      shellY = offsetY + margin + Math.random() * yRange;
+      shellPresent = true;
     }
-    // Game loop: update positions and render
+
+    // Initialize yacht at a random edge of the visible area
+    function initYachtPosition() {
+      const edge = Math.floor(Math.random() * 4);
+      const margin = 50;
+      if (edge === 0) { // left edge
+        yachtX = offsetX - margin;
+        yachtY = offsetY + Math.random() * visibleHeight;
+      } else if (edge === 1) { // right edge
+        yachtX = offsetX + visibleWidth + margin;
+        yachtY = offsetY + Math.random() * visibleHeight;
+      } else if (edge === 2) { // top edge
+        yachtY = offsetY - margin;
+        yachtX = offsetX + Math.random() * visibleWidth;
+      } else if (edge === 3) { // bottom edge
+        yachtY = offsetY + visibleHeight + margin;
+        yachtX = offsetX + Math.random() * visibleWidth;
+      }
+    }
+
+    // Set current level (update speed and background)
+    function setLevel(newLevel) {
+      if (newLevel > 6) newLevel = 6;
+      level = newLevel;
+      yachtSpeed = 2 + (level - 1) * 0.5;  // increase yacht speed each level
+      currentBg = bgImages[level];        // switch background image
+      updateHUD();
+    }
+
+    // Initialize Dina's position and scale at center of screen
+    function initDina() {
+      dinaX = offsetX + visibleWidth / 2;
+      dinaY = offsetY + visibleHeight / 2;
+      dinaScale = baseDinaScale;
+    }
+
+    // Control input handlers for on-screen buttons
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const upBtn = document.getElementById('upBtn');
+    const downBtn = document.getElementById('downBtn');
+
+    function onPointerDown(direction) {
+      switch (direction) {
+        case 'left':  moveLeft = true; break;
+        case 'right': moveRight = true; break;
+        case 'up':    moveUp = true; break;
+        case 'down':  moveDown = true; break;
+      }
+      startAudio();  // start music on first interaction
+    }
+    function onPointerUp(direction) {
+      switch (direction) {
+        case 'left':  moveLeft = false; break;
+        case 'right': moveRight = false; break;
+        case 'up':    moveUp = false; break;
+        case 'down':  moveDown = false; break;
+      }
+    }
+
+    // Use Pointer Events if supported (for multi-touch), otherwise fallback to touch/mouse events
+    if (window.PointerEvent) {
+      [leftBtn, rightBtn, upBtn, downBtn].forEach(btn => {
+        const dir = btn.id.replace('Btn', '');  // e.g., "leftBtn" -> "left"
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          onPointerDown(dir);
+        });
+        btn.addEventListener('pointerup', e => {
+          e.preventDefault();
+          onPointerUp(dir);
+        });
+        btn.addEventListener('pointerleave', () => onPointerUp(dir));
+        btn.addEventListener('pointercancel', () => onPointerUp(dir));
+      });
+    } else {
+      // Touch and Mouse events fallback
+      [leftBtn, rightBtn, upBtn, downBtn].forEach(btn => {
+        const dir = btn.id.replace('Btn', '');
+        btn.addEventListener('mousedown', e => {
+          e.preventDefault();
+          onPointerDown(dir);
+        });
+        btn.addEventListener('mouseup', () => onPointerUp(dir));
+        btn.addEventListener('mouseleave', () => onPointerUp(dir));
+        btn.addEventListener('touchstart', e => {
+          e.preventDefault();
+          onPointerDown(dir);
+        });
+        btn.addEventListener('touchend', () => onPointerUp(dir));
+        btn.addEventListener('touchcancel', () => onPointerUp(dir));
+      });
+    }
+
+    // Keyboard controls for desktop (arrow keys)
+    window.addEventListener('keydown', e => {
+      switch (e.key) {
+        case 'ArrowLeft':  moveLeft = true;  startAudio(); break;
+        case 'ArrowRight': moveRight = true; startAudio(); break;
+        case 'ArrowUp':    moveUp = true;    startAudio(); break;
+        case 'ArrowDown':  moveDown = true;  startAudio(); break;
+      }
+    });
+    window.addEventListener('keyup', e => {
+      switch (e.key) {
+        case 'ArrowLeft':  moveLeft = false; break;
+        case 'ArrowRight': moveRight = false; break;
+        case 'ArrowUp':    moveUp = false; break;
+        case 'ArrowDown':  moveDown = false; break;
+      }
+    });
+
+    // Sound toggle control
+    const bgMusic = document.getElementById('bgMusic');
+    const soundIcon = document.getElementById('soundIcon');
+    soundIcon.addEventListener('click', () => {
+      if (isSoundOn) {
+        // Turn sound off
+        isSoundOn = false;
+        soundIcon.src = soundOffImg;
+        if (!bgMusic.paused) bgMusic.pause();
+      } else {
+        // Turn sound on
+        isSoundOn = true;
+        soundIcon.src = soundOnImg;
+        if (firstInteractionHappened) {
+          bgMusic.play();
+        }
+      }
+    });
+
+    // Prepare audio (will play on first interaction due to browser auto-play policy)
+    bgMusic.volume = 1.0;
+    let firstInteractionHappened = false;
+    function startAudio() {
+      if (!firstInteractionHappened) {
+        firstInteractionHappened = true;
+        if (isSoundOn) {
+          // Try to play music (will work only if triggered by user gesture)
+          bgMusic.play().catch(err => {
+            // Autoplay might be blocked until user interacts again
+          });
+        }
+      }
+    }
+
+    // Disable context menu (prevent right-click or long-press menus)
+    window.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Game loop variables
+    let currentBg = bgImages[1];  // current background image (level-based)
+    // Game loop using requestAnimationFrame
     function gameLoop(timestamp) {
       if (!lastTime) lastTime = timestamp;
-      const dt = (timestamp - lastTime) / 1000;
+      const delta = timestamp - lastTime;
       lastTime = timestamp;
-      // Move Dina based on input flags
-      if (upPressed)    Dina.y -= DINA_SPEED * dt;
-      if (downPressed)  Dina.y += DINA_SPEED * dt;
-      if (leftPressed)  Dina.x -= DINA_SPEED * dt;
-      if (rightPressed) Dina.x += DINA_SPEED * dt;
-      // Keep Dina within screen bounds
-      const halfDW = (Dina.width * Dina.scale) / 2;
-      const halfDH = (Dina.height * Dina.scale) / 2;
-      if (Dina.x < marginX + halfDW) Dina.x = marginX + halfDW;
-      if (Dina.x > marginX + screenW - halfDW) Dina.x = marginX + screenW - halfDW;
-      if (Dina.y < marginY + halfDH) Dina.y = marginY + halfDH;
-      if (Dina.y > marginY + screenH - halfDH) Dina.y = marginY + screenH - halfDH;
-      // Move yacht towards shell
-      if (yacht.active) {
-        yacht.x += yacht.vx * dt;
-        // Deactivate yacht if it goes completely off screen
-        if (yacht.vx > 0 && yacht.x - yacht.width/2 > marginX + screenW) {
-          yacht.active = false;
-        }
-        if (yacht.vx < 0 && yacht.x + yacht.width/2 < marginX) {
-          yacht.active = false;
+
+      // Draw background (cover entire canvas)
+      if (currentBg && currentBg.complete) {
+        ctx.drawImage(currentBg, 0, 0, gameWidth, gameHeight);
+      } else {
+        // If image not yet loaded, fill with black
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, gameWidth, gameHeight);
+      }
+
+      // Update Dina's position based on input
+      let dx = 0, dy = 0;
+      if (moveLeft)  dx -= 1;
+      if (moveRight) dx += 1;
+      if (moveUp)    dy -= 1;
+      if (moveDown)  dy += 1;
+      // Normalize diagonal movement so speed remains consistent
+      if (dx !== 0 && dy !== 0) {
+        dx *= Math.SQRT1_2;
+        dy *= Math.SQRT1_2;
+      }
+      // Move Dina by her speed
+      dinaX += dx * dinaSpeed;
+      dinaY += dy * dinaSpeed;
+      // Prevent Dina from going out of visible bounds (keep fully on screen)
+      if (dinaX < offsetX + (playerImg.width * dinaScale) / 2) {
+        dinaX = offsetX + (playerImg.width * dinaScale) / 2;
+      }
+      if (dinaX > offsetX + visibleWidth - (playerImg.width * dinaScale) / 2) {
+        dinaX = offsetX + visibleWidth - (playerImg.width * dinaScale) / 2;
+      }
+      if (dinaY < offsetY + (playerImg.height * dinaScale) / 2) {
+        dinaY = offsetY + (playerImg.height * dinaScale) / 2;
+      }
+      if (dinaY > offsetY + visibleHeight - (playerImg.height * dinaScale) / 2) {
+        dinaY = offsetY + visibleHeight - (playerImg.height * dinaScale) / 2;
+      }
+
+      // Move yacht toward the current shell if it exists
+      if (shellPresent) {
+        const dxBoat = shellX - yachtX;
+        const dyBoat = shellY - yachtY;
+        const distBoat = Math.hypot(dxBoat, dyBoat);
+        if (distBoat < yachtSpeed) {
+          // Close enough to reach this frame
+          yachtX = shellX;
+          yachtY = shellY;
+        } else {
+          // Move toward shell
+          yachtX += (dxBoat / distBoat) * yachtSpeed;
+          yachtY += (dyBoat / distBoat) * yachtSpeed;
         }
       }
-      // Check for shell collection by Dina or yacht
-      if (shell.active) {
-        const shellHalfW = shell.width / 2;
-        const shellHalfH = shell.height / 2;
-        // Dina collects the shell
-        if (
-          Math.abs(Dina.x - shell.x) < (halfDW + shellHalfW) &&
-          Math.abs(Dina.y - shell.y) < (halfDH + shellHalfH)
-        ) {
+
+      // Check collisions if a shell is present
+      if (shellPresent) {
+        const dxShell = shellX - dinaX;
+        const dyShell = shellY - dinaY;
+        const distShell = Math.hypot(dxShell, dyShell);
+        // Determine collision radii (approximate as circles)
+        let dinaRadius = playerImg.complete ? (playerImg.width * dinaScale) / 2 : 20 * dinaScale;
+        let shellRadius = shellImg.complete ? shellImg.width / 2 : 10;
+        if (distShell < dinaRadius + shellRadius) {
+          // Dina collects the shell
           shellsCollected++;
-          document.getElementById('shellCount').textContent = shellsCollected;
-          // Increase Dina's size (scale up to 3x maximum)
-          Dina.scale = Math.min(3, Dina.scale + 0.2);
-          // Remove the shell and yacht
-          shell.active = false;
-          yacht.active = false;
-          // Level up every 5 shells
-          if (shellsCollected % 5 === 0) {
-            if (level < 6) {
-              level++;
-              document.getElementById('level').textContent = level;
-            }
-            // Re-center Dina at the start of each new level
-            Dina.x = marginX + screenW / 2;
-            Dina.y = marginY + screenH / 2;
+          shellPresent = false;
+          // Grow Dina up to 3x size
+          dinaScale = Math.min(maxDinaScale, dinaScale + 0.4);
+          // Check for level up
+          const newLevel = Math.min(6, Math.floor(shellsCollected / 5) + 1);
+          if (newLevel !== level) {
+            setLevel(newLevel);
+            // Re-center Dina at start of new level
+            dinaX = offsetX + visibleWidth / 2;
+            dinaY = offsetY + visibleHeight / 2;
           }
-          // Spawn the next shell
-          spawnShell();
+          updateHUD();
+          // Spawn the next shell after a short delay
+          setTimeout(spawnShell, 500);
         }
-        // Yacht reaches the shell (if Dina hasn't collected it yet)
-        else if (
-          yacht.active &&
-          Math.abs(yacht.x - shell.x) < (yacht.width/2 + shellHalfW)
-        ) {
-          // Shell is taken by the yacht (Dina misses this shell)
-          shell.active = false;
-          yacht.active = false;
-          // Spawn a new shell
-          spawnShell();
+        // If shell still present (not already taken by Dina)
+        if (shellPresent) {
+          let yachtRadius = yachtImg.complete ? yachtImg.width / 2 : 30;
+          if (distShell < yachtRadius + shellRadius) {
+            // Yacht reaches the shell first – Dina loses this bonus
+            shellPresent = false;
+            // Spawn next shell after a short delay
+            setTimeout(spawnShell, 500);
+          }
         }
       }
-      // Draw background
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(bgImages[level], 0, 0, canvas.width, canvas.height);
+
       // Draw shell
-      if (shell.active) {
-        ctx.drawImage(shell.img, shell.x - shell.width/2, shell.y - shell.height/2);
+      if (shellPresent && shellImg.complete) {
+        ctx.drawImage(shellImg, shellX - shellImg.width / 2, shellY - shellImg.height / 2);
       }
-      // Draw Dina (with current scale)
-      ctx.drawImage(
-        Dina.img,
-        Dina.x - (Dina.width * Dina.scale) / 2,
-        Dina.y - (Dina.height * Dina.scale) / 2,
-        Dina.width * Dina.scale,
-        Dina.height * Dina.scale
-      );
       // Draw yacht
-      if (yacht.active) {
-        ctx.drawImage(yacht.img, yacht.x - yacht.width/2, yacht.y - yacht.height/2);
+      if (yachtImg.complete) {
+        ctx.drawImage(yachtImg, yachtX - yachtImg.width / 2, yachtY - yachtImg.height / 2);
       }
-      // Update HUD timer (mm:ss format)
-      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-      const minutes = Math.floor(elapsedSeconds / 60);
-      const seconds = elapsedSeconds % 60;
-      document.getElementById('timer').textContent =
-        (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+      // Draw Dina (player)
+      if (playerImg.complete) {
+        const pWidth = playerImg.width * dinaScale;
+        const pHeight = playerImg.height * dinaScale;
+        ctx.drawImage(playerImg, dinaX - pWidth / 2, dinaY - pHeight / 2, pWidth, pHeight);
+      } else {
+        // If Dina's image not loaded yet, draw a placeholder circle
+        ctx.fillStyle = 'blue';
+        ctx.beginPath();
+        ctx.arc(dinaX, dinaY, 20 * dinaScale, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
       // Loop the game
       requestAnimationFrame(gameLoop);
     }
+
+    // Start the game
+    initDina();
+    initYachtPosition();
+    spawnShell();
+    updateHUD();
+    // Start the timer
+    setInterval(() => {
+      timerSeconds++;
+      updateTimerDisplay();
+    }, 1000);
+    // Start the game loop
+    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>
