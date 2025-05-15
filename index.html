@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Діна збирає мушлі — гра</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <style>
+    html, body {
+      background: #18191a;
+      color: #b0ffb7;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0; padding: 0;
+      height: 100%; width: 100vw; overflow-x: hidden;
+    }
+    body { text-align: center; min-height: 100vh;}
+    h1 { margin-top: 24px; margin-bottom: 6px; font-size: 2em; color: #95fa92;}
+    .level, .score, .timer { font-size: 1.1em; margin: 6px 0 2px 0; letter-spacing: 1px;}
+    .level { color: #97e8fd;}
+    .timer { color: #ffeda0;}
+    .game-container {
+      margin: 0 auto;
+      border: 2px solid #62d362;
+      border-radius: 18px;
+      background: #111;
+      box-shadow: 0 0 32px #1a3b26bb;
+      position: relative;
+      max-width: 96vw;
+      width: 960px;
+      height: 56vw;
+      max-height: 540px;
+      aspect-ratio: 16/9;
+      min-width: 300px;
+      min-height: 180px;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #game-canvas {
+      width: 100%; height: 100%;
+      background: #000;
+      border-radius: 14px;
+      display: block;
+      margin: 0 auto;
+      touch-action: none;
+      user-select: none;
+    }
+    @media (max-width: 700px) {
+      h1 { font-size: 1.2em;}
+      .game-container { height: 56vw; min-height: 180px;}
+    }
+    @media (max-width: 500px) {
+      h1 { font-size: 1em;}
+      .game-container { height: 180px; min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Діна збирає мушлі</h1>
+  <div class="level">Рівень: <span id="level">1</span></div>
+  <div class="score">Бонуси: <span id="score">0</span></div>
+  <div class="timer">Залишилось часу: <span id="timer">01:00</span></div>
+  <div class="game-container">
+    <canvas id="game-canvas" width="960" height="540"></canvas>
+  </div>
+  <audio id="bg-music" src="music/yachting-song.WAV" preload="auto" loop></audio>
+  <script>
+    // --- Глобальні константи
+    const CANVAS_W = 960, CANVAS_H = 540;
+    const PLAYER_W0 = 120, PLAYER_H0 = 60;
+    const SHELL_W = 48, SHELL_H = 48;
+    const YACHT_W = 90, YACHT_H = 110;
+    const LEVEL_TIME = 60;
+    const MOVE_STEP = 20;
+    const backgrounds = [
+      'backgrounds/bg1.jpg','backgrounds/bg2.jpg','backgrounds/bg3.jpg',
+      'backgrounds/bg4.jpg','backgrounds/bg5.jpg','backgrounds/bg6.jpg'
+    ];
+    let level = 1, totalLevels = backgrounds.length;
+    let score = 0, timeLeft = LEVEL_TIME, timerId = null, gameOver = false;
+    let playerW = PLAYER_W0, playerH = PLAYER_H0;
+
+    // --- Графіка
+    const bg = new Image();
+    const dina = new Image(); dina.src = 'icons/dina.png';
+    const shell = new Image(); shell.src = 'icons/shell.png';
+    const yacht = new Image(); yacht.src = 'yachts/yacht1.png';
+
+    // --- Гра
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    let player = {x: CANVAS_W/2-PLAYER_W0/2, y: CANVAS_H/2-PLAYER_H0/2};
+    let shellPos = randomShell();
+    let shellAnim = {scale: 1, fade: 1, show: true};
+    let yachtPos = {x: 50, y: CANVAS_H/2};
+    let yachtCatchAnim = 0;
+
+    // --- Музика (запуск лише після першого взаємодії!)
+    const music = document.getElementById('bg-music');
+    let musicStarted = false;
+    function startMusic() {
+      if (!musicStarted) { music.play().catch(()=>{}); musicStarted = true; }
+    }
+
+    // --- Mobile resize/match aspect
+    function fitCanvas() {
+      let cont = document.querySelector('.game-container');
+      let w = cont.clientWidth, h = cont.clientHeight;
+      let ar = w/h, targetAR = CANVAS_W/CANVAS_H;
+      if (ar > targetAR) {
+        canvas.style.width = `${h*targetAR}px`; canvas.style.height = `${h}px`;
+      } else {
+        canvas.style.width = `${w}px`; canvas.style.height = `${w/targetAR}px`;
+      }
+    }
+    window.addEventListener('resize', fitCanvas);
+    setTimeout(fitCanvas, 150);
+
+    // --- Рівні: динамічна швидкість яхти
+    function getYachtSpeed(level) {
+      if (level <= 2) return 0.8;
+      if (level <= 4) return 1.2;
+      return 2 + 0.1*(level-5);
+    }
+
+    // --- Основний цикл малювання
+    function draw() {
+      ctx.clearRect(0,0, CANVAS_W, CANVAS_H);
+      // фон
+      if (bg.complete) ctx.drawImage(bg, 0, 0, CANVAS_W, CANVAS_H);
+      // хвилі/бульбашки
+      drawBubbles();
+      // shell
+      if (shellAnim.show && shell.complete) {
+        ctx.save();
+        ctx.globalAlpha = shellAnim.fade;
+        ctx.translate(shellPos.x+SHELL_W/2, shellPos.y+SHELL_H/2);
+        ctx.scale(shellAnim.scale, shellAnim.scale);
+        ctx.drawImage(shell, -SHELL_W/2, -SHELL_H/2, SHELL_W, SHELL_H);
+        ctx.restore();
+      }
+      // яхта
+      if (yacht.complete) ctx.drawImage(yacht, yachtPos.x, yachtPos.y, YACHT_W, YACHT_H);
+      // Діна
+      if (dina.complete) {
+        ctx.save();
+        if (yachtCatchAnim > 0) ctx.globalAlpha = 1 - yachtCatchAnim/10;
+        ctx.drawImage(dina, player.x, player.y, playerW, playerH);
+        ctx.restore();
+      }
+    }
+
+    // --- Бульбашки/анімація води
+    let bubbles = [];
+    function genBubbles() {
+      bubbles = [];
+      let n = 10 + Math.floor(Math.random()*8);
+      for (let i=0;i<n;i++) {
+        bubbles.push({
+          x: Math.random()*CANVAS_W,
+          y: Math.random()*CANVAS_H,
+          r: 18+Math.random()*22,
+          s: 0.5+Math.random()*1.2,
+          o: 0.12+Math.random()*0.13,
+          t: Math.random()*360
+        });
+      }
+    }
+    function drawBubbles() {
+      ctx.save();
+      for (let b of bubbles) {
+        ctx.globalAlpha = b.o;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y-b.t, b.r, 0, 2*Math.PI);
+        ctx.fillStyle = '#caffff';
+        ctx.fill();
+        ctx.globalAlpha = 0.18;
+        ctx.strokeStyle = '#b6fcfc';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        b.t += b.s*0.9;
+        if (b.y-b.t < -b.r) { b.t = -b.y + CANVAS_H + Math.random()*80;}
+      }
+      ctx.restore();
+    }
+
+    // --- Управління (клавіатура + свайпи)
+    window.addEventListener('keydown', e=>{
+      if (gameOver) return;
+      startMusic();
+      let moved = false;
+      if      (e.key==='ArrowLeft'||e.key==='a')  { player.x -= MOVE_STEP; moved = true;}
+      else if (e.key==='ArrowRight'||e.key==='d') { player.x += MOVE_STEP; moved = true;}
+      else if (e.key==='ArrowUp'||e.key==='w')    { player.y -= MOVE_STEP; moved = true;}
+      else if (e.key==='ArrowDown'||e.key==='s')  { player.y += MOVE_STEP; moved = true;}
+      clampPlayer();
+      if (moved) { draw(); checkCatch(); }
+    });
+    // --- Свайпи (дуже акуратно)
+    let touchStartX, touchStartY, isTouch = false;
+    canvas.addEventListener('touchstart', e=>{
+      if (gameOver) return;
+      startMusic();
+      isTouch = true;
+      let t = e.touches[0];
+      touchStartX = t.clientX; touchStartY = t.clientY;
+    });
+    canvas.addEventListener('touchmove', e=>{ if (gameOver) return; });
+    canvas.addEventListener('touchend', e=>{
+      if (!isTouch) return;
+      let t = e.changedTouches[0];
+      let dx = t.clientX - touchStartX, dy = t.clientY - touchStartY;
+      let adx = Math.abs(dx), ady = Math.abs(dy);
+      let moved = false;
+      if (adx>ady && adx>22) {
+        if (dx>0) player.x += MOVE_STEP; else player.x -= MOVE_STEP; moved = true;
+      } else if (ady>adx && ady>22) {
+        if (dy>0) player.y += MOVE_STEP; else player.y -= MOVE_STEP; moved = true;
+      }
+      clampPlayer();
+      if (moved) { draw(); checkCatch(); }
+      isTouch = false;
+    });
+
+    // --- Межі для гравця
+    function clampPlayer() {
+      player.x = Math.max(0, Math.min(CANVAS_W-playerW, player.x));
+      player.y = Math.max(0, Math.min(CANVAS_H-playerH, player.y));
+    }
+
+    // --- Рух яхти
+    function moveYacht() {
+      let dx = shellPos.x - yachtPos.x, dy = shellPos.y - yachtPos.y;
+      let len = Math.sqrt(dx*dx+dy*dy);
+      let spd = getYachtSpeed(level);
+      if (len>0.2) {
+        yachtPos.x += dx/len*spd;
+        yachtPos.y += dy/len*spd;
+      }
+    }
+
+    // --- Перевірка на зіткнення
+    function checkCatch() {
+      if (!shellAnim.show) return;
+      // Діна збирає
+      if (player.x < shellPos.x+SHELL_W && player.x+playerW > shellPos.x &&
+          player.y < shellPos.y+SHELL_H && player.y+playerH > shellPos.y) {
+        score++;
+        playerW += 2; playerH += 1; // плавне збільшення
+        document.getElementById('score').innerText = score;
+        animateShellCatch(()=>{
+          shellPos = randomShell();
+          shellAnim = {scale:1, fade:1, show:true};
+          draw();
+        });
+      }
+      // Яхта збирає (невдача)
+      if (yachtPos.x < shellPos.x+SHELL_W && yachtPos.x+YACHT_W > shellPos.x &&
+          yachtPos.y < shellPos.y+SHELL_H && yachtPos.y+YACHT_H > shellPos.y) {
+        yachtCatchAnim = 10;
+        shellAnim.show = false;
+        setTimeout(()=>{
+          shellPos = randomShell();
+          shellAnim = {scale:1, fade:1, show:true};
+          yachtCatchAnim = 0;
+          draw();
+        }, 300);
+      }
+    }
+
+    // --- Анімація мушлі при зборі
+    function animateShellCatch(cb) {
+      shellAnim.show = true; shellAnim.scale = 1; shellAnim.fade = 1;
+      let steps = 15, frame = 0;
+      function step() {
+        shellAnim.scale = 1 + 0.4*Math.sin(Math.PI*frame/steps);
+        shellAnim.fade = 1 - frame/steps;
+        draw();
+        if (++frame<=steps) requestAnimationFrame(step);
+        else { shellAnim.show = false; cb(); }
+      }
+      step();
+    }
+
+    // --- Генерація мушлі
+    function randomShell() {
+      return {
+        x: Math.random()*(CANVAS_W-SHELL_W-16)+8,
+        y: Math.random()*(CANVAS_H-SHELL_H-16)+8
+      }
+    }
+
+    // --- Таймер
+    function startTimer() {
+      timerId = setInterval(()=>{
+        if (--timeLeft<=0) {
+          timeLeft = 0;
+          level++;
+          if (level <= totalLevels) {
+            setLevel(level);
+            shellPos = randomShell();
+            player = {x: CANVAS_W/2-PLAYER_W0/2, y: CANVAS_H/2-PLAYER_H0/2};
+            playerW = PLAYER_W0; playerH = PLAYER_H0;
+            shellAnim = {scale:1, fade:1, show:true};
+            yachtPos = {x: 50, y: CANVAS_H/2};
+            draw();
+          } else {
+            gameOver = true;
+            clearInterval(timerId);
+            setTimeout(()=>alert('Вітаємо! Гру завершено. Ваш результат: '+score), 100);
+          }
+        }
+        updateTimer();
+      }, 1000);
+    }
+    function updateTimer() {
+      let min = Math.floor(timeLeft/60).toString().padStart(2,'0');
+      let sec = (timeLeft%60).toString().padStart(2,'0');
+      document.getElementById('timer').innerText = `${min}:${sec}`;
+    }
+
+    // --- Зміна рівня
+    function setLevel(newLevel) {
+      level = newLevel;
+      if (level > totalLevels) {
+        gameOver = true;
+        clearInterval(timerId);
+        draw();
+        setTimeout(()=>alert('Вітаємо! Гру завершено. Ваш результат: '+score), 100);
+        return;
+      }
+      bg.src = backgrounds[level-1];
+      document.getElementById('level').innerText = level;
+      timeLeft = LEVEL_TIME;
+      updateTimer();
+      genBubbles();
+      draw();
+    }
+
+    // --- Головний цикл (requestAnimationFrame)
+    function gameLoop() {
+      if (!gameOver) {
+        moveYacht();
+        draw();
+        checkCatch();
+        if (yachtCatchAnim>0) yachtCatchAnim--;
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // --- Старт
+    function startGame() {
+      setLevel(1);
+      draw();
+      startTimer();
+      gameLoop();
+    }
+    // Завантаження всіх зображень
+    let loaded = 0;
+    [bg, dina, shell, yacht].forEach(img => { img.onload = ()=>{ loaded++; if (loaded===4) startGame(); } });
+    bg.src = backgrounds[0];
+    genBubbles();
+    fitCanvas();
+  </script>
+</body>
+</html>
