@@ -2,7 +2,10 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <title>Діна збирає мушлі</title>
     <style>
         * {
@@ -12,6 +15,7 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
+            font-family: 'Segoe UI', Arial, sans-serif;
         }
 
         html, body {
@@ -22,7 +26,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: Arial, sans-serif;
         }
 
         #gameContainer {
@@ -32,11 +35,53 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
         }
 
         #gameCanvas {
             position: absolute;
             touch-action: none;
+            z-index: 1;
+        }
+
+        .hud-item {
+            background: rgba(0, 0, 0, 0.75);
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0 10px;
+            min-width: fit-content;
+            white-space: nowrap;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .hud-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .level-text {
+            margin-left: 20px;
+            border-left: 2px solid rgba(255, 255, 255, 0.3);
+            padding-left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #levelText {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 10px;
+            border-radius: 15px;
+            min-width: 30px;
+            text-align: center;
         }
 
         #hud {
@@ -44,7 +89,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            padding: 10px 50px 10px 10px;
+            padding: 20px;
             z-index: 2;
             color: white;
             text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);
@@ -55,71 +100,142 @@
             transform: none;
         }
 
-        .hud-item {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 5px 12px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            margin: 0 10px;
-            min-width: fit-content;
+        .hud-icon {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.5));
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
         }
 
-        .hud-icon {
-            width: 24px;
-            height: 24px;
-            filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+        .hud-item:hover .hud-icon {
+            transform: scale(1.1);
         }
 
         #controls {
             position: absolute;
-            bottom: 20px;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 20px;
+            gap: 35px;
             z-index: 2;
         }
 
         .control-btn {
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.2);
+            width: 85px;
+            height: 85px;
+            background: rgba(255, 255, 255, 0.25);
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
             touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .control-btn img {
-            width: 40px;
-            height: 40px;
+            width: 55px;
+            height: 55px;
             pointer-events: none;
+            filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.5));
+            transition: transform 0.2s ease;
         }
 
         .control-btn:active {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn:active img {
+            transform: scale(0.95);
         }
 
         #soundToggle {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 32px;
-            height: 32px;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
             cursor: pointer;
             z-index: 3;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            padding: 10px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
 
-        #soundToggle img {
-            width: 100%;
-            height: 100%;
-            filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+        #soundToggle:hover {
+            transform: scale(1.1);
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        #soundToggle:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .hud-item {
+                font-size: 20px;
+                padding: 8px 16px;
+            }
+
+            .hud-icon {
+                width: 28px;
+                height: 28px;
+            }
+
+            #controls {
+                bottom: 30px;
+                gap: 25px;
+            }
+
+            .control-btn {
+                width: 75px;
+                height: 75px;
+            }
+
+            .control-btn img {
+                width: 45px;
+                height: 45px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hud-item {
+                font-size: 18px;
+                padding: 6px 12px;
+            }
+
+            .level-text {
+                margin-left: 12px;
+                padding-left: 12px;
+            }
+
+            #controls {
+                gap: 20px;
+            }
+
+            .control-btn {
+                width: 65px;
+                height: 65px;
+            }
+
+            .control-btn img {
+                width: 40px;
+                height: 40px;
+            }
         }
     </style>
 </head>
@@ -128,30 +244,30 @@
         <canvas id="gameCanvas"></canvas>
         <div id="hud">
             <div class="hud-item">
-                <img src="icons/shell.png" class="hud-icon" alt="Shell">
+                <img src="/dina-shell-game/icons/shell.png" class="hud-icon" alt="Shell">
                 <span id="scoreText">0</span>
             </div>
             <div class="hud-item">
-                <img src="icons/hourglass.png" class="hud-icon" alt="Timer">
+                <img src="/dina-shell-game/icons/hourglass.png" class="hud-icon" alt="Timer">
                 <span id="timeText">00:00</span>
-                <span>Рівень: <span id="levelText">1</span></span>
+                <span class="level-text">Рівень: <span id="levelText">1</span></span>
             </div>
         </div>
         <button id="soundToggle">
-            <img src="icons/sound-on.png" alt="Sound">
+            <img src="/dina-shell-game/icons/sound-on.png" alt="Sound">
         </button>
         <div id="controls">
             <div class="control-btn" id="btnLeft">
-                <img src="icons/left.png" alt="Left">
+                <img src="/dina-shell-game/icons/left.png" alt="Left">
             </div>
             <div class="control-btn" id="btnUp">
-                <img src="icons/up.png" alt="Up">
+                <img src="/dina-shell-game/icons/up.png" alt="Up">
             </div>
             <div class="control-btn" id="btnDown">
-                <img src="icons/down.png" alt="Down">
+                <img src="/dina-shell-game/icons/down.png" alt="Down">
             </div>
             <div class="control-btn" id="btnRight">
-                <img src="icons/right.png" alt="Right">
+                <img src="/dina-shell-game/icons/right.png" alt="Right">
             </div>
         </div>
     </div>
@@ -243,7 +359,7 @@
             yacht: new Image(),
             shell: new Image(),
             backgrounds: Array(MAX_LEVEL).fill(null).map(() => new Image()),
-            audio: new Audio('music/yachting-song.MP3')
+            audio: new Audio('/dina-shell-game/music/yachting-song.MP3')
         };
 
         // Инициализация canvas
@@ -258,82 +374,34 @@
                     console.log(`Image loaded successfully: ${url}`);
                     resolve(true);
                 };
-                img.onerror = () => {
-                    console.error(`Failed to load image: ${url}`);
+                img.onerror = (error) => {
+                    console.error(`Failed to load image: ${url}`, error);
                     resolve(false);
                 };
                 img.src = url;
             });
         }
 
-        // Улучшенная функция загрузки яхты
-        async function loadYacht() {
-            console.log('Attempting to load yacht image...');
-            
-            // Проверяем существование файла
-            const yachtExists = await checkImage('icons/yacht1.png');
-            if (!yachtExists) {
-                console.error('Yacht image not found at icons/yacht1.png');
-                return false;
-            }
-
-            return new Promise((resolve, reject) => {
-                resources.yacht = new Image();
-                resources.yacht.onload = () => {
-                    console.log('Yacht image loaded and ready');
-                    resolve(true);
-                };
-                resources.yacht.onerror = () => {
-                    console.error('Yacht image failed to load');
-                    reject(false);
-                };
-                resources.yacht.src = 'icons/yacht1.png';
-            });
-        }
-
-        // Функции игровой логики
-        function calculateGameBoundaries() {
-            const container = document.getElementById('gameContainer');
-            const controls = document.getElementById('controls');
-            const controlsHeight = controls?.offsetHeight || 0;
-            
-            const containerWidth = container.clientWidth;
-            const containerHeight = container.clientHeight - controlsHeight;
-
-            if ((containerWidth / containerHeight) > ASPECT_RATIO) {
-                gameHeight = containerHeight;
-                gameWidth = gameHeight * ASPECT_RATIO;
-            } else {
-                gameWidth = containerWidth;
-                gameHeight = gameWidth / ASPECT_RATIO;
-            }
-
-            canvas.width = containerWidth;
-            canvas.height = containerHeight + controlsHeight;
-
-            gameOffsetX = (containerWidth - gameWidth) / 2;
-            gameOffsetY = (containerHeight - gameHeight) / 2;
-
-            // Обновляем позицию HUD
-            updateHUDPosition();
-            updateSoundButtonPosition();
-        }
-
         async function initGame() {
             console.log('Game initialization started');
             
-            // Загружаем ресурсы с проверкой
-            resources.dina.src = 'icons/dina.png';
-            resources.shell.src = 'icons/shell.png';
+            // Загружаем ресурсы с проверкой и обработкой ошибок
+            resources.dina.onload = () => console.log('Dina sprite loaded successfully');
+            resources.dina.onerror = (e) => console.error('Failed to load Dina sprite:', e);
+            resources.dina.src = '/dina-shell-game/icons/dina.png';
             
-            // Загружаем яхту с обработчиками
+            resources.shell.onload = () => console.log('Shell sprite loaded successfully');
+            resources.shell.onerror = (e) => console.error('Failed to load shell sprite:', e);
+            resources.shell.src = '/dina-shell-game/icons/shell.png';
+            
             resources.yacht.onload = () => console.log('Yacht loaded successfully');
-            resources.yacht.onerror = (e) => console.error('Yacht failed to load:', e);
-            resources.yacht.src = 'icons/yacht1.png';
-            console.log('Attempting to load yacht from:', resources.yacht.src);
+            resources.yacht.onerror = (e) => console.error('Failed to load yacht:', e);
+            resources.yacht.src = '/dina-shell-game/icons/yacht1.png';
 
             resources.backgrounds.forEach((bg, i) => {
-                bg.src = `backgrounds/bg${i + 1}.jpg`;
+                bg.onload = () => console.log(`Background ${i + 1} loaded successfully`);
+                bg.onerror = (e) => console.error(`Failed to load background ${i + 1}:`, e);
+                bg.src = `/dina-shell-game/backgrounds/bg${i + 1}.jpg`;
             });
 
             // Инициализируем размеры
@@ -343,36 +411,37 @@
             // Размещаем Дину в центре
             resetDinaPosition();
             
-            // Запускаем игру когда все ресурсы загружены
-            Promise.all([
-                new Promise(resolve => {
-                    if (resources.dina.complete) resolve();
-                    else resources.dina.onload = resolve;
-                }),
-                new Promise(resolve => {
-                    if (resources.yacht.complete) resolve();
-                    else resources.yacht.onload = resolve;
-                }),
-                new Promise(resolve => {
-                    if (resources.shell.complete) resolve();
-                    else resources.shell.onload = resolve;
-                }),
-                ...resources.backgrounds.map(bg => 
-                    new Promise(resolve => {
-                        if (bg.complete) resolve();
-                        else bg.onload = resolve;
-                    })
-                )
-            ]).then(() => {
-                console.log('All resources loaded, starting game');
-                console.log('Yacht status:', {
-                    complete: resources.yacht.complete,
-                    src: resources.yacht.src,
-                    naturalWidth: resources.yacht.naturalWidth,
-                    naturalHeight: resources.yacht.naturalHeight
-                });
+            // Проверяем наличие файлов перед запуском
+            const resourceChecks = [
+                checkImage('/dina-shell-game/icons/dina.png'),
+                checkImage('/dina-shell-game/icons/yacht1.png'),
+                checkImage('/dina-shell-game/icons/shell.png'),
+                ...Array(MAX_LEVEL).fill().map((_, i) => checkImage(`/dina-shell-game/backgrounds/bg${i + 1}.jpg`))
+            ];
+
+            const results = await Promise.all(resourceChecks);
+            const missingResources = results.some(result => !result);
+
+            if (missingResources) {
+                console.error('Some resources failed to load. Check file paths and permissions.');
+                // Добавляем сообщение об ошибке на экран
+                const errorMsg = document.createElement('div');
+                errorMsg.style.position = 'absolute';
+                errorMsg.style.top = '50%';
+                errorMsg.style.left = '50%';
+                errorMsg.style.transform = 'translate(-50%, -50%)';
+                errorMsg.style.color = 'white';
+                errorMsg.style.fontSize = '20px';
+                errorMsg.style.textAlign = 'center';
+                errorMsg.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                errorMsg.style.padding = '20px';
+                errorMsg.style.borderRadius = '10px';
+                errorMsg.innerHTML = 'Помилка завантаження ресурсів гри.<br>Будь ласка, перезавантажте сторінку.';
+                document.body.appendChild(errorMsg);
+            } else {
+                console.log('All resources loaded successfully');
                 startGame();
-            });
+            }
         }
 
         function startGame() {
@@ -615,33 +684,43 @@
         function gameLoop() {
             if (!isGameRunning) return;
 
+            // Очищаем канвас
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // Проверяем и отрисовываем фон
             const currentBg = resources.backgrounds[level - 1];
-            if (currentBg) {
+            if (currentBg && currentBg.complete && currentBg.naturalWidth) {
                 ctx.drawImage(currentBg, gameOffsetX, gameOffsetY, gameWidth, gameHeight);
+            } else {
+                console.warn('Background not ready:', level);
             }
 
             updateDina();
             updateYacht();
             checkCollisions();
 
-            // Рисуем ракушку
-            if (shell.active) {
+            // Рисуем ракушку с проверкой
+            if (shell.active && resources.shell.complete && resources.shell.naturalWidth) {
                 ctx.drawImage(resources.shell, 
                     shell.x, shell.y, 
                     SHELL_CONFIG.size, SHELL_CONFIG.size);
             }
 
-            // Рисуем Дину используя новую функцию
-            drawDina();
+            // Рисуем Дину с проверкой
+            if (resources.dina.complete && resources.dina.naturalWidth) {
+                drawDina();
+            } else {
+                console.warn('Dina sprite not ready');
+            }
 
-            // Рисуем яхту
-            if (resources.yacht.complete) {
+            // Рисуем яхту с проверкой
+            if (resources.yacht.complete && resources.yacht.naturalWidth) {
                 ctx.drawImage(resources.yacht,
                     yacht.x, yacht.y,
                     YACHT_CONFIG.width, YACHT_CONFIG.height);
+            } else {
+                console.warn('Yacht sprite not ready');
             }
 
             // Отрисовка границ игрового поля
@@ -795,7 +874,7 @@
                     soundEnabled = !soundEnabled;
                     const img = soundToggle.querySelector('img');
                     if (img) {
-                        img.src = soundEnabled ? 'icons/sound-on.png' : 'icons/sound-off.png';
+                        img.src = soundEnabled ? '/dina-shell-game/icons/sound-on.png' : '/dina-shell-game/icons/sound-off.png';
                     }
                     if (soundEnabled) {
                         tryPlayAudio();
